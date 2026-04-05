@@ -67,7 +67,7 @@ func HealthzHandler() http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		resp := map[string]string{"status": "ok"}
-		json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck // #nosec G104 -- best-effort health response
 	}
 }
 
@@ -86,12 +86,12 @@ func ReadyzHandler(graylogClient HealthChecker) http.HandlerFunc {
 		if err := graylogClient.Healthy(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			resp := map[string]string{"status": "unavailable", "error": err.Error()}
-			json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+			json.NewEncoder(w).Encode(resp) //nolint:errcheck // #nosec G104 -- best-effort health response
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
 		resp := map[string]string{"status": "ok"}
-		json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+		json.NewEncoder(w).Encode(resp) //nolint:errcheck // #nosec G104 -- best-effort health response
 	}
 }
