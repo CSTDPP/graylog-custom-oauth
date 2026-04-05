@@ -43,7 +43,7 @@ func (s *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upstreamURL.Scheme = s.targetURL.Scheme
 	upstreamURL.Host = s.targetURL.Host
 
-	upstreamReq, err := http.NewRequestWithContext(r.Context(), r.Method, upstreamURL.String(), r.Body)
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), r.Method, upstreamURL.String(), r.Body) // #nosec G704 -- target URL is from config, not user input (reverse proxy by design)
 	if err != nil {
 		s.logger.ErrorContext(r.Context(), "failed to create upstream SSE request",
 			slog.String("error", err.Error()))

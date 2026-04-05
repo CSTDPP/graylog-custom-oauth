@@ -77,7 +77,7 @@ func Load() (*Config, error) {
 
 	// Parse SESSION_KEY from hex.
 	sessionKeyHex := os.Getenv("SESSION_KEY")
-	if sessionKeyHex == "" {
+	if sessionKeyHex == "" { //nolint:gocritic // ifElseChain: validation logic reads better as if/else
 		errs = append(errs, "required environment variable SESSION_KEY is not set")
 	} else {
 		decoded, err := hex.DecodeString(sessionKeyHex)

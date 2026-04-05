@@ -55,7 +55,7 @@ func TestSetGet_Roundtrip(t *testing.T) {
 
 	cookie := setAndExtractCookie(t, mgr, original)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	req.AddCookie(cookie)
 
 	got, err := mgr.Get(req)
@@ -71,7 +71,7 @@ func TestSetGet_Roundtrip(t *testing.T) {
 
 func TestGet_NoCookie(t *testing.T) {
 	mgr := newTestManager()
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 
 	_, err := mgr.Get(req)
 	require.Error(t, err)
@@ -85,7 +85,7 @@ func TestGet_ExpiredSession(t *testing.T) {
 
 	cookie := setAndExtractCookie(t, mgr, sess)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	req.AddCookie(cookie)
 
 	_, err := mgr.Get(req)
@@ -101,7 +101,7 @@ func TestGet_TamperedCookie(t *testing.T) {
 	// Tamper with the cookie value.
 	cookie.Value = cookie.Value[:len(cookie.Value)-4] + "XXXX"
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	req.AddCookie(cookie)
 
 	_, err := mgr.Get(req)
@@ -134,7 +134,7 @@ func TestClear(t *testing.T) {
 func TestGet_InvalidCookieValue(t *testing.T) {
 	mgr := newTestManager()
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	req.AddCookie(&http.Cookie{
 		Name:  "graylog_session",
 		Value: "totally-garbage-value!!!",
