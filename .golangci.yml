@@ -1,0 +1,24 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gosec
+    - revive
+    - gocritic
+    - exhaustive
+    - wrapcheck
+    - contextcheck
+
+linters-settings:
+  gosec:
+    severity: medium
+    confidence: medium
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  gocritic:
+    enabled-tags: [diagnostic, style, performance]

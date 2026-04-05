@@ -1,0 +1,77 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: >
+        mongosh --eval "try { rs.status() } catch(e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}) }"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  opensearch:
+    image: opensearchproject/opensearch:2
+    container_name: opensearch
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  graylog:
+    image: graylog/graylog:7.0
+    container_name: graylog
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=somepasswordpepper
+      - GRAYLOG_ROOT_PASSWORD_SHA2=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918
+      - GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
+      - GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog
+    ports:
+      - "9000:9000"
+      - "1514:1514"
+      - "1514:1514/udp"
+      - "12201:12201"
+      - "12201:12201/udp"
+
+  proxy:
+    build: .
+    container_name: graylog-auth-proxy
+    depends_on:
+      - graylog
+    environment:
+      - OAUTH_ISSUER_URL=https://your-idp.example.com
+      - OAUTH_CLIENT_ID=<your-client-id>
+      - OAUTH_CLIENT_SECRET=<your-client-secret>
+      - OAUTH_REDIRECT_URL=https://localhost:8443/callback
+      - GRAYLOG_BACKEND_URL=http://graylog:9000
+      - COOKIE_HASH_KEY=<32-byte-hex-key>
+      - COOKIE_BLOCK_KEY=<32-byte-hex-key>
+      - TLS_CERT_PATH=/certs/tls.crt
+      - TLS_KEY_PATH=/certs/tls.key
+    ports:
+      - "8443:8443"
+
+volumes:
+  mongodb_data:
+  opensearch_data:
