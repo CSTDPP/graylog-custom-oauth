@@ -1,0 +1,43 @@
+---
+env:
+  contexts:
+    - name: "graylog-auth-proxy"
+      urls:
+        - "https://localhost:8443"
+      includePaths:
+        - "https://localhost:8443.*"
+      excludePaths:
+        - "https://localhost:8443/metrics"
+
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  - type: spider
+    parameters:
+      context: "graylog-auth-proxy"
+      maxDuration: 2
+      maxDepth: 3
+
+  - type: passiveScan-config
+    parameters:
+      maxAlertsPerRule: 10
+
+  - type: activeScan
+    parameters:
+      context: "graylog-auth-proxy"
+      maxRuleDurationInMins: 2
+      maxScanDurationInMins: 5
+      policy: ""
+
+  - type: report
+    parameters:
+      template: "sarif-json"
+      reportDir: "/zap/reports"
+      reportFile: "zap-report"
+
+    risks:
+      - high
+      - critical

@@ -1,0 +1,5 @@
+10003	IGNORE	https://localhost:8443	Vulnerable JS Library	False positive - no JS libraries in Go proxy
+10015	IGNORE	https://localhost:8443	Re-examine Cache-control Directives	Proxy intentionally sets no-cache for SSE
+10098	IGNORE	https://localhost:8443	Cross-Domain Misconfiguration	Expected - proxy forwards to backend
+40025	IGNORE	https://localhost:8443	Proxy Disclosure	Expected - this IS a proxy
+90033	IGNORE	https://localhost:8443	Loosely Scoped Cookie	Session cookie scoped to / by design
