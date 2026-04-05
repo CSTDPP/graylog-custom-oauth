@@ -69,11 +69,11 @@ func TestMain(m *testing.M) {
 			networkName: {"graylog"},
 		},
 		Env: map[string]string{
-			"GRAYLOG_HTTP_BIND_ADDRESS":    "0.0.0.0:9000",
-			"GRAYLOG_MONGODB_URI":          "mongodb://mongo:27017/graylog",
-			"GRAYLOG_PASSWORD_SECRET":      "somethinglongenoughforpasswordsecret1234567890",
-			"GRAYLOG_ROOT_PASSWORD_SHA2":   "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
-			"GRAYLOG_HTTP_EXTERNAL_URI":    "http://localhost:9000/",
+			"GRAYLOG_HTTP_BIND_ADDRESS":  "0.0.0.0:9000",
+			"GRAYLOG_MONGODB_URI":        "mongodb://mongo:27017/graylog",
+			"GRAYLOG_PASSWORD_SECRET":    "somethinglongenoughforpasswordsecret1234567890",
+			"GRAYLOG_ROOT_PASSWORD_SHA2": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+			"GRAYLOG_HTTP_EXTERNAL_URI":  "http://localhost:9000/",
 		},
 		WaitingFor: wait.ForHTTP("/api/system").
 			WithPort("9000/tcp").
