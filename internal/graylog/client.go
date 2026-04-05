@@ -60,7 +60,11 @@ func NewClient(baseURL, serviceToken, caCertFile string, logger *slog.Logger) (*
 		return nil, fmt.Errorf("invalid Graylog base URL %q: scheme and host are required", baseURL)
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected default transport type")
+	}
+	transport := defaultTransport.Clone()
 
 	if caCertFile != "" {
 		caCert, readErr := os.ReadFile(caCertFile)

@@ -81,7 +81,7 @@ func Load() (*Config, error) {
 		errs = append(errs, "required environment variable SESSION_KEY is not set")
 	} else {
 		decoded, err := hex.DecodeString(sessionKeyHex)
-		if err != nil {
+		if err != nil { //nolint:gocritic // ifElseChain: validation chain is clearer than switch
 			errs = append(errs, fmt.Sprintf("SESSION_KEY is not valid hex: %v", err))
 		} else if len(decoded) != 32 {
 			errs = append(errs, fmt.Sprintf("SESSION_KEY must be exactly 32 bytes (64 hex chars), got %d bytes", len(decoded)))

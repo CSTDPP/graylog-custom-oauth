@@ -24,7 +24,7 @@ func (m *mockHealthChecker) Healthy(_ context.Context) error {
 func TestHealthzHandler(t *testing.T) {
 	handler := HealthzHandler()
 
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -37,7 +37,7 @@ func TestReadyzHandler_Healthy(t *testing.T) {
 	checker := &mockHealthChecker{err: nil}
 	handler := ReadyzHandler(checker)
 
-	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/readyz", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -50,7 +50,7 @@ func TestReadyzHandler_Unhealthy(t *testing.T) {
 	checker := &mockHealthChecker{err: errors.New("connection refused")}
 	handler := ReadyzHandler(checker)
 
-	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/readyz", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
