@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	tempCookieName  = "oauth_state"
+	tempCookieName   = "oauth_state"
 	tempCookieMaxAge = 300 // 5 minutes
 )
 
@@ -277,4 +277,3 @@ func pkceS256Challenge(verifier string) string {
 	h := sha256.Sum256([]byte(verifier))
 	return base64.RawURLEncoding.EncodeToString(h[:])
 }
-

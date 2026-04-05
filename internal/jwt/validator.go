@@ -51,11 +51,11 @@ func (v *Validator) Validate(ctx context.Context, rawToken string) (*Claims, err
 
 	var raw struct {
 		PreferredUsername string   `json:"preferred_username"`
-		UPN              string   `json:"upn"`
-		Sub              string   `json:"sub"`
-		Name             string   `json:"name"`
-		Email            string   `json:"email"`
-		Roles            []string `json:"roles"`
+		UPN               string   `json:"upn"`
+		Sub               string   `json:"sub"`
+		Name              string   `json:"name"`
+		Email             string   `json:"email"`
+		Roles             []string `json:"roles"`
 	}
 	if err := idToken.Claims(&raw); err != nil {
 		return nil, fmt.Errorf("extracting token claims: %w", err)

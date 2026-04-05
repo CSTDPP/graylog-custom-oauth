@@ -60,14 +60,14 @@ func Load() (*Config, error) {
 
 	// Validate required string fields.
 	required := map[string]string{
-		"ENTRA_TENANT_ID":      cfg.EntraTenantID,
-		"ENTRA_CLIENT_ID":      cfg.EntraClientID,
-		"ENTRA_CLIENT_SECRET":  cfg.EntraClientSecret,
-		"ENTRA_REDIRECT_URL":   cfg.EntraRedirectURL,
-		"GRAYLOG_URL":          cfg.GraylogURL,
+		"ENTRA_TENANT_ID":       cfg.EntraTenantID,
+		"ENTRA_CLIENT_ID":       cfg.EntraClientID,
+		"ENTRA_CLIENT_SECRET":   cfg.EntraClientSecret,
+		"ENTRA_REDIRECT_URL":    cfg.EntraRedirectURL,
+		"GRAYLOG_URL":           cfg.GraylogURL,
 		"GRAYLOG_SERVICE_TOKEN": cfg.GraylogServiceToken,
-		"TLS_CERT_FILE":        cfg.TLSCertFile,
-		"TLS_KEY_FILE":         cfg.TLSKeyFile,
+		"TLS_CERT_FILE":         cfg.TLSCertFile,
+		"TLS_KEY_FILE":          cfg.TLSKeyFile,
 	}
 	for name, val := range required {
 		if val == "" {

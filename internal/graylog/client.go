@@ -267,4 +267,3 @@ func truncateBody(body []byte) string {
 	}
 	return string(body)
 }
-
