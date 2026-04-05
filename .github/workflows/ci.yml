@@ -151,13 +151,10 @@ jobs:
             exit 1
           fi
 
-      - name: Trivy image scan
+      - name: Trivy image scan (SARIF)
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: graylog-auth-proxy:ci
-          severity: CRITICAL
-          exit-code: 1
-          ignore-unfixed: true
           format: sarif
           output: trivy-image.sarif
 
@@ -167,3 +164,11 @@ jobs:
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image
+
+      - name: Trivy image gate (fail on fixable CRITICAL)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: graylog-auth-proxy:ci
+          severity: CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
