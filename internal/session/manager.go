@@ -1,3 +1,4 @@
+// Package session manages encrypted cookie-based user sessions.
 package session
 
 import (

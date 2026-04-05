@@ -1,3 +1,4 @@
+// Package graylog provides a REST API client for Graylog user management.
 package graylog
 
 import (

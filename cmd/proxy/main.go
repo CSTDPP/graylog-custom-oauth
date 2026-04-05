@@ -1,3 +1,4 @@
+// Package main is the entry point for the Graylog OAuth2 Auth Proxy.
 package main
 
 import (

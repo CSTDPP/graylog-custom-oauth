@@ -1,3 +1,4 @@
+// Package proxy provides the authentication middleware and reverse proxy handlers.
 package proxy
 
 import (
