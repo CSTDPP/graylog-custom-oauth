@@ -36,7 +36,7 @@ func setAndExtractCookie(t *testing.T, mgr *Manager, sess *Session) *http.Cookie
 	require.NoError(t, err)
 
 	resp := rec.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	cookies := resp.Cookies()
 	require.NotEmpty(t, cookies, "expected at least one Set-Cookie header")
 
@@ -116,7 +116,7 @@ func TestClear(t *testing.T) {
 	mgr.Clear(rec)
 
 	resp := rec.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	cookies := resp.Cookies()
 	require.NotEmpty(t, cookies)
 

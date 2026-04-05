@@ -1,3 +1,4 @@
+// Package main is the entry point for the Graylog OAuth2 Auth Proxy.
 package main
 
 import (
@@ -139,9 +140,10 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:      cfg.ListenAddr,
-		Handler:   mux,
-		TLSConfig: tlsConfig,
+		Addr:              cfg.ListenAddr,
+		Handler:           mux,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Start server in a goroutine.

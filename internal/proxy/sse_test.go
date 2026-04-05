@@ -47,7 +47,7 @@ func TestSSEHandler_StreamsData(t *testing.T) {
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "data: hello\n\n")
+		_, _ = fmt.Fprint(w, "data: hello\n\n")
 	}))
 	defer backend.Close()
 
@@ -96,7 +96,7 @@ func TestSSEHandler_ContextCancellation(t *testing.T) {
 	// Use a pipe-based ResponseWriter so flushing works and the handler can
 	// detect a closed client connection.
 	pr, pw := io.Pipe()
-	defer pr.Close()
+	defer func() { _ = pr.Close() }()
 
 	rec := httptest.NewRecorder()
 

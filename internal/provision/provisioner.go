@@ -1,3 +1,4 @@
+// Package provision handles automatic Graylog user creation and role synchronization.
 package provision
 
 import (

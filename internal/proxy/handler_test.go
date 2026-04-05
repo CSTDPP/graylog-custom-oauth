@@ -53,7 +53,7 @@ func setupHandler(t *testing.T, mock *mockGraylogClient) (*Handler, *session.Man
 			w.Header().Set("X-Received-Remote-User", v)
 		}
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "backend OK")
+		_, _ = fmt.Fprint(w, "backend OK")
 	}))
 	t.Cleanup(backend.Close)
 

@@ -1,3 +1,4 @@
+// Package jwt provides JWKS-based JWT token validation for Microsoft Entra ID.
 package jwt
 
 import (

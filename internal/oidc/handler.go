@@ -1,3 +1,4 @@
+// Package oidc implements the OAuth2/OIDC authorization code flow with PKCE for Microsoft Entra ID.
 package oidc
 
 import (

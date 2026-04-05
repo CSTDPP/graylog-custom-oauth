@@ -1,3 +1,4 @@
+// Package roles maps Microsoft Entra ID App Roles to Graylog role names.
 package roles
 
 // Mapper translates Microsoft Entra App Role names to Graylog role names

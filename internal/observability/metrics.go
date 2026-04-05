@@ -1,8 +1,9 @@
+// Package observability provides Prometheus metrics and health check endpoints.
 package observability
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -66,8 +67,7 @@ func HealthzHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		resp := map[string]string{"status": "ok"}
-		json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+		_, _ = w.Write([]byte(`{"status":"ok"}` + "\n"))
 	}
 }
 
@@ -85,13 +85,11 @@ func ReadyzHandler(graylogClient HealthChecker) http.HandlerFunc {
 
 		if err := graylogClient.Healthy(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
-			resp := map[string]string{"status": "unavailable", "error": err.Error()}
-			json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+			_, _ = fmt.Fprintf(w, `{"status":"unavailable","error":%q}`+"\n", err.Error())
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-		resp := map[string]string{"status": "ok"}
-		json.NewEncoder(w).Encode(resp) //nolint:errcheck // best-effort health response
+		_, _ = w.Write([]byte(`{"status":"ok"}` + "\n"))
 	}
 }

@@ -1,3 +1,4 @@
+// Package graylog provides a REST API client for Graylog user management.
 package graylog
 
 import (
@@ -67,7 +68,7 @@ func NewClient(baseURL, serviceToken, caCertFile string, logger *slog.Logger) (*
 	transport := defaultTransport.Clone()
 
 	if caCertFile != "" {
-		caCert, readErr := os.ReadFile(caCertFile)
+		caCert, readErr := os.ReadFile(caCertFile) // #nosec G304 -- CA cert path from config, not user input
 		if readErr != nil {
 			return nil, fmt.Errorf("reading CA certificate file %s: %w", caCertFile, readErr)
 		}
@@ -131,7 +132,7 @@ func (c *Client) GetUser(ctx context.Context, username string) (*User, error) {
 func (c *Client) CreateUser(ctx context.Context, req *CreateUserRequest) error {
 	reqURL := fmt.Sprintf("%s/api/users", c.baseURL)
 
-	payload, err := json.Marshal(req)
+	payload, err := json.Marshal(req) // #nosec G117 -- password is intentionally in the struct for user creation
 	if err != nil {
 		return fmt.Errorf("marshaling create user request: %w", err)
 	}
@@ -240,7 +241,7 @@ func (c *Client) doWithRetry(ctx context.Context, method, reqURL string, jsonBod
 		}
 
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if readErr != nil {
 			lastErr = fmt.Errorf("reading response body: %w", readErr)
 			continue
