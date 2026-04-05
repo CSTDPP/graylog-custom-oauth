@@ -110,7 +110,7 @@ func successMock() *mockGraylogClient {
 func TestServeHTTP_NoSession_Redirects(t *testing.T) {
 	handler, _, _ := setupHandler(t, successMock())
 
-	req := httptest.NewRequest(http.MethodGet, "/some/path", nil)
+	req := httptest.NewRequest(http.MethodGet, "/some/path", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -126,7 +126,7 @@ func TestServeHTTP_ValidSession_ProxiesToBackend(t *testing.T) {
 	sess := newTestSession("alice")
 	cookie := setSessionCookie(t, mgr, sess)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", http.NoBody)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 
@@ -142,7 +142,7 @@ func TestServeHTTP_ValidSession_InjectsXRemoteUser(t *testing.T) {
 	sess := newTestSession("alice")
 	cookie := setSessionCookie(t, mgr, sess)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", http.NoBody)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 
@@ -158,7 +158,7 @@ func TestServeHTTP_SpoofedHeaderStripped(t *testing.T) {
 	sess := newTestSession("alice")
 	cookie := setSessionCookie(t, mgr, sess)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", http.NoBody)
 	req.AddCookie(cookie)
 	req.Header.Set("X-Remote-User", "evil")
 	rec := httptest.NewRecorder()
@@ -189,7 +189,7 @@ func TestServeHTTP_ProvisionError_Returns503(t *testing.T) {
 	sess := newTestSession("alice")
 	cookie := setSessionCookie(t, mgr, sess)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", http.NoBody)
 	req.AddCookie(cookie)
 	rec := httptest.NewRecorder()
 
