@@ -23,7 +23,7 @@ import (
 // mockGraylogClient implements provision.GraylogClient for handler tests.
 type mockGraylogClient struct {
 	getUser         func(ctx context.Context, username string) (*graylog.User, error)
-	createUser      func(ctx context.Context, req graylog.CreateUserRequest) error
+	createUser      func(ctx context.Context, req *graylog.CreateUserRequest) error
 	updateUserRoles func(ctx context.Context, username string, roles []string) error
 }
 
@@ -31,7 +31,7 @@ func (m *mockGraylogClient) GetUser(ctx context.Context, username string) (*gray
 	return m.getUser(ctx, username)
 }
 
-func (m *mockGraylogClient) CreateUser(ctx context.Context, req graylog.CreateUserRequest) error {
+func (m *mockGraylogClient) CreateUser(ctx context.Context, req *graylog.CreateUserRequest) error {
 	return m.createUser(ctx, req)
 }
 
@@ -98,7 +98,7 @@ func successMock() *mockGraylogClient {
 		getUser: func(_ context.Context, _ string) (*graylog.User, error) {
 			return &graylog.User{Username: "test"}, nil
 		},
-		createUser: func(_ context.Context, _ graylog.CreateUserRequest) error {
+		createUser: func(_ context.Context, _ *graylog.CreateUserRequest) error {
 			return nil
 		},
 		updateUserRoles: func(_ context.Context, _ string, _ []string) error {
@@ -176,7 +176,7 @@ func TestServeHTTP_ProvisionError_Returns503(t *testing.T) {
 		getUser: func(_ context.Context, _ string) (*graylog.User, error) {
 			return nil, errors.New("graylog unreachable")
 		},
-		createUser: func(_ context.Context, _ graylog.CreateUserRequest) error {
+		createUser: func(_ context.Context, _ *graylog.CreateUserRequest) error {
 			return nil
 		},
 		updateUserRoles: func(_ context.Context, _ string, _ []string) error {

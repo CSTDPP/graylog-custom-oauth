@@ -124,7 +124,7 @@ func (c *Client) GetUser(ctx context.Context, username string) (*User, error) {
 }
 
 // CreateUser creates a new user in Graylog.
-func (c *Client) CreateUser(ctx context.Context, req CreateUserRequest) error {
+func (c *Client) CreateUser(ctx context.Context, req *CreateUserRequest) error {
 	reqURL := fmt.Sprintf("%s/api/users", c.baseURL)
 
 	payload, err := json.Marshal(req)

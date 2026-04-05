@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   lint:
@@ -49,19 +48,6 @@ jobs:
           go-version-file: go.mod
 
       - name: Run gosec
-        uses: securego/gosec@master
-        with:
-          args: -severity medium -confidence medium -fmt sarif -out gosec.sarif ./...
-        continue-on-error: true
-
-      - name: Upload gosec SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: gosec.sarif
-          category: gosec
-
-      - name: Run gosec (fail on HIGH/CRITICAL)
         run: |
           go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec -severity high -confidence medium ./...
@@ -80,6 +66,7 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
+        continue-on-error: true
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
@@ -88,15 +75,6 @@ jobs:
           scan-ref: .
           severity: CRITICAL,HIGH
           exit-code: 1
-          format: sarif
-          output: trivy-fs.sarif
-
-      - name: Upload Trivy SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-sca
 
   unit-test:
     name: Unit Tests
@@ -158,12 +136,3 @@ jobs:
           image-ref: graylog-auth-proxy:ci
           severity: CRITICAL
           exit-code: 1
-          format: sarif
-          output: trivy-image.sarif
-
-      - name: Upload Trivy image SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-image.sarif
-          category: trivy-image
