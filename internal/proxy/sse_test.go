@@ -17,34 +17,34 @@ import (
 )
 
 func TestIsSSERequest_MCPPath(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", http.NoBody)
 	assert.True(t, IsSSERequest(r))
 }
 
 func TestIsSSERequest_MCPSubpath(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/api/mcp/foo/bar", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/mcp/foo/bar", http.NoBody)
 	assert.True(t, IsSSERequest(r))
 }
 
 func TestIsSSERequest_AcceptHeader(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/some/path", nil)
+	r := httptest.NewRequest(http.MethodGet, "/some/path", http.NoBody)
 	r.Header.Set("Accept", "text/event-stream")
 	assert.True(t, IsSSERequest(r))
 }
 
 func TestIsSSERequest_NormalRequest(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/api/users", nil)
+	r := httptest.NewRequest(http.MethodGet, "/api/users", http.NoBody)
 	r.Header.Set("Accept", "application/json")
 	assert.False(t, IsSSERequest(r))
 }
 
 func TestIsSSERequest_EmptyPath(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	assert.False(t, IsSSERequest(r))
 }
 
 func TestSSEHandler_StreamsData(t *testing.T) {
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "data: hello\n\n")
@@ -59,7 +59,7 @@ func TestSSEHandler_StreamsData(t *testing.T) {
 
 	handler := NewSSEHandler(targetURL, http.DefaultTransport, metrics)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", http.NoBody)
 	rec := httptest.NewRecorder()
 
 	handler.ServeHTTP(rec, req)
@@ -91,7 +91,7 @@ func TestSSEHandler_ContextCancellation(t *testing.T) {
 	handler := NewSSEHandler(targetURL, http.DefaultTransport, metrics)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	req := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", nil).WithContext(ctx)
+	req := httptest.NewRequest(http.MethodGet, "/api/mcp/sse", http.NoBody).WithContext(ctx)
 
 	// Use a pipe-based ResponseWriter so flushing works and the handler can
 	// detect a closed client connection.

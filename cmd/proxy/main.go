@@ -108,7 +108,8 @@ func main() {
 			os.Exit(1)
 		}
 		backendTLSConfig = &tls.Config{
-			RootCAs: caCertPool,
+			RootCAs:    caCertPool,
+			MinVersion: tls.VersionTLS12,
 		}
 	}
 
@@ -166,12 +167,13 @@ func main() {
 
 	// Graceful shutdown with timeout.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
+		cancel()
 		logger.Error("graceful shutdown failed", "error", err)
 		os.Exit(1)
 	}
 
+	cancel()
 	logger.Info("server stopped")
 }

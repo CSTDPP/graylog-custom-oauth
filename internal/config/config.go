@@ -60,14 +60,14 @@ func Load() (*Config, error) {
 
 	// Validate required string fields.
 	required := map[string]string{
-		"ENTRA_TENANT_ID":      cfg.EntraTenantID,
-		"ENTRA_CLIENT_ID":      cfg.EntraClientID,
-		"ENTRA_CLIENT_SECRET":  cfg.EntraClientSecret,
-		"ENTRA_REDIRECT_URL":   cfg.EntraRedirectURL,
-		"GRAYLOG_URL":          cfg.GraylogURL,
+		"ENTRA_TENANT_ID":       cfg.EntraTenantID,
+		"ENTRA_CLIENT_ID":       cfg.EntraClientID,
+		"ENTRA_CLIENT_SECRET":   cfg.EntraClientSecret,
+		"ENTRA_REDIRECT_URL":    cfg.EntraRedirectURL,
+		"GRAYLOG_URL":           cfg.GraylogURL,
 		"GRAYLOG_SERVICE_TOKEN": cfg.GraylogServiceToken,
-		"TLS_CERT_FILE":        cfg.TLSCertFile,
-		"TLS_KEY_FILE":         cfg.TLSKeyFile,
+		"TLS_CERT_FILE":         cfg.TLSCertFile,
+		"TLS_KEY_FILE":          cfg.TLSKeyFile,
 	}
 	for name, val := range required {
 		if val == "" {
@@ -77,11 +77,11 @@ func Load() (*Config, error) {
 
 	// Parse SESSION_KEY from hex.
 	sessionKeyHex := os.Getenv("SESSION_KEY")
-	if sessionKeyHex == "" {
+	if sessionKeyHex == "" { //nolint:gocritic // ifElseChain: validation logic reads better as if/else
 		errs = append(errs, "required environment variable SESSION_KEY is not set")
 	} else {
 		decoded, err := hex.DecodeString(sessionKeyHex)
-		if err != nil {
+		if err != nil { //nolint:gocritic // ifElseChain: validation chain is clearer than switch
 			errs = append(errs, fmt.Sprintf("SESSION_KEY is not valid hex: %v", err))
 		} else if len(decoded) != 32 {
 			errs = append(errs, fmt.Sprintf("SESSION_KEY must be exactly 32 bytes (64 hex chars), got %d bytes", len(decoded)))

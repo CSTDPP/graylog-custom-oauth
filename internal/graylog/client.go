@@ -60,7 +60,11 @@ func NewClient(baseURL, serviceToken, caCertFile string, logger *slog.Logger) (*
 		return nil, fmt.Errorf("invalid Graylog base URL %q: scheme and host are required", baseURL)
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defaultTransport, ok := http.DefaultTransport.(*http.Transport)
+	if !ok {
+		return nil, fmt.Errorf("unexpected default transport type")
+	}
+	transport := defaultTransport.Clone()
 
 	if caCertFile != "" {
 		caCert, readErr := os.ReadFile(caCertFile)
@@ -74,7 +78,7 @@ func NewClient(baseURL, serviceToken, caCertFile string, logger *slog.Logger) (*
 		}
 
 		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
+			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 		}
 		transport.TLSClientConfig.RootCAs = caCertPool
 	}
@@ -124,7 +128,7 @@ func (c *Client) GetUser(ctx context.Context, username string) (*User, error) {
 }
 
 // CreateUser creates a new user in Graylog.
-func (c *Client) CreateUser(ctx context.Context, req CreateUserRequest) error {
+func (c *Client) CreateUser(ctx context.Context, req *CreateUserRequest) error {
 	reqURL := fmt.Sprintf("%s/api/users", c.baseURL)
 
 	payload, err := json.Marshal(req)
@@ -267,4 +271,3 @@ func truncateBody(body []byte) string {
 	}
 	return string(body)
 }
-

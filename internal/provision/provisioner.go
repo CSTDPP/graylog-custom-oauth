@@ -22,7 +22,7 @@ type UserInfo struct {
 // GraylogClient is the subset of graylog.Client used by the Provisioner.
 type GraylogClient interface {
 	GetUser(ctx context.Context, username string) (*graylog.User, error)
-	CreateUser(ctx context.Context, req graylog.CreateUserRequest) error
+	CreateUser(ctx context.Context, req *graylog.CreateUserRequest) error
 	UpdateUserRoles(ctx context.Context, username string, roles []string) error
 }
 
@@ -58,7 +58,7 @@ func (p *Provisioner) Provision(ctx context.Context, info UserInfo) error {
 			return fmt.Errorf("generating password for user %s: %w", info.Username, genErr)
 		}
 
-		createReq := graylog.CreateUserRequest{
+		createReq := &graylog.CreateUserRequest{
 			Username:    info.Username,
 			Email:       info.Email,
 			FullName:    info.Name,

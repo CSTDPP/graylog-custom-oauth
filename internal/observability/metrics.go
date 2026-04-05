@@ -63,7 +63,7 @@ func NewMetrics(reg prometheus.Registerer) *Metrics {
 // HealthzHandler returns a handler that always responds with 200 and a JSON
 // body indicating the service is alive.
 func HealthzHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		resp := map[string]string{"status": "ok"}
