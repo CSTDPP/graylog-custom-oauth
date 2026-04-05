@@ -74,7 +74,7 @@ func NewClient(baseURL, serviceToken, caCertFile string, logger *slog.Logger) (*
 		}
 
 		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
+			transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 		}
 		transport.TLSClientConfig.RootCAs = caCertPool
 	}

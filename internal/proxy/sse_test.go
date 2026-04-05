@@ -44,7 +44,7 @@ func TestIsSSERequest_EmptyPath(t *testing.T) {
 }
 
 func TestSSEHandler_StreamsData(t *testing.T) {
-	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "data: hello\n\n")
