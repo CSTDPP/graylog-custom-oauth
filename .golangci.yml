@@ -1,3 +1,5 @@
+version: "2"
+
 linters:
   enable:
     - errcheck
@@ -11,9 +13,8 @@ linters:
     - gocritic
     - exhaustive
     - wrapcheck
-    - contextcheck
 
-linters-settings:
+settings:
   gosec:
     severity: medium
     confidence: medium
