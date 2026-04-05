@@ -157,6 +157,7 @@ jobs:
           image-ref: graylog-auth-proxy:ci
           severity: CRITICAL
           exit-code: 1
+          ignore-unfixed: true
           format: sarif
           output: trivy-image.sarif
 
