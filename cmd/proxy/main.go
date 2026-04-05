@@ -139,10 +139,10 @@ func main() {
 	}
 
 	server := &http.Server{
-		Addr:               cfg.ListenAddr,
-		Handler:            mux,
-		TLSConfig:          tlsConfig,
-		ReadHeaderTimeout:  10 * time.Second,
+		Addr:              cfg.ListenAddr,
+		Handler:           mux,
+		TLSConfig:         tlsConfig,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Start server in a goroutine.
