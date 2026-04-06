@@ -177,7 +177,7 @@ func getEnv(name string) string {
 // variant takes precedence when both are set.
 func getEnvOrFile(name string) string {
 	if filePath := os.Getenv(name + "_FILE"); filePath != "" {
-		data, err := os.ReadFile(filePath) // #nosec G304 -- file path from env var, not user input
+		data, err := os.ReadFile(filePath) //nolint:gosec // #nosec G304 G703 -- file path from env var, not user input
 		if err != nil {
 			return ""
 		}
