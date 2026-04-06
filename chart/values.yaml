@@ -170,5 +170,74 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 
+# -- Topology spread constraints for multi-AZ deployments
+topologySpreadConstraints: []
+#   - maxSkew: 1
+#     topologyKey: topology.kubernetes.io/zone
+#     whenUnsatisfiable: DoNotSchedule
+#     labelSelector:
+#       matchLabels: {}  # auto-filled with selector labels
+
+# -- Termination grace period (should match Go proxy's 15s shutdown timeout)
+terminationGracePeriodSeconds: 30
+
+# -- Pod Disruption Budget
+pdb:
+  enabled: false
+  # -- Minimum available pods (mutually exclusive with maxUnavailable)
+  minAvailable: ""
+  # -- Maximum unavailable pods
+  maxUnavailable: 1
+
+# -- Observability (Prometheus Operator integration)
+metrics:
+  serviceMonitor:
+    # -- Create a ServiceMonitor for Prometheus Operator
+    enabled: false
+    # -- Scrape interval
+    interval: "30s"
+    # -- Extra labels for ServiceMonitor (e.g. release: prometheus)
+    labels: {}
+    # -- Metric relabeling rules
+    metricRelabelings: []
+  prometheusRule:
+    # -- Create a PrometheusRule with alerting rules
+    enabled: false
+    # -- Extra labels for PrometheusRule
+    labels: {}
+    # -- Additional custom alerting rules
+    additionalRules: []
+  grafanaDashboard:
+    # -- Create a ConfigMap with a Grafana dashboard (auto-discovered by Grafana sidecar)
+    enabled: false
+    # -- Extra labels for the dashboard ConfigMap
+    labels: {}
+    # -- Annotations (e.g. grafana folder)
+    annotations: {}
+    #   grafana_folder: "Infrastructure"
+
 # -- Extra environment variables (list format: [{name, value}] or [{name, valueFrom}])
 extraEnv: []
+
+# -- Extra volumes to add to the pod
+extraVolumes: []
+#   - name: custom-certs
+#     secret:
+#       secretName: my-custom-certs
+
+# -- Extra volume mounts to add to the container
+extraVolumeMounts: []
+#   - name: custom-certs
+#     mountPath: /etc/custom-certs
+#     readOnly: true
+
+# -- Deployment annotations (e.g. for Flux, ArgoCD)
+deploymentAnnotations: {}
+
+# -- Flux CD integration labels
+flux:
+  # -- Add kustomize.toolkit.fluxcd.io labels for Flux reconciliation
+  enabled: false
+  kustomization:
+    name: ""
+    namespace: "flux-system"

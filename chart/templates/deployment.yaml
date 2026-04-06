@@ -4,6 +4,10 @@ metadata:
   name: {{ include "graylog-auth-proxy.fullname" . }}
   labels:
     {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+  {{- with .Values.deploymentAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -36,6 +40,7 @@ spec:
       {{- else }}
       automountServiceAccountToken: false
       {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 30 }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
@@ -125,6 +130,9 @@ spec:
               mountPath: /ca
               readOnly: true
             {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
@@ -185,6 +193,9 @@ spec:
               - key: {{ .Values.graylog.caCert.key }}
                 path: ca.crt
         {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -195,5 +206,9 @@ spec:
       {{- end }}
       {{- with .Values.tolerations }}
       tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
         {{- toYaml . | nindent 8 }}
       {{- end }}

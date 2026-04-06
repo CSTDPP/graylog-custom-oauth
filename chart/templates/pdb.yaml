@@ -1,0 +1,17 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  {{- if .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable | default 1 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "graylog-auth-proxy.selectorLabels" . | nindent 6 }}
+{{- end }}
