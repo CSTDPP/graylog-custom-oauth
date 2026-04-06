@@ -240,6 +240,111 @@ ingress:
         - graylog.company.com
 ```
 
+### Observability
+
+#### ServiceMonitor (Prometheus Operator)
+
+Enable automatic Prometheus scraping of the `/metrics` endpoint:
+
+```yaml
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: "30s"
+    labels:
+      release: prometheus        # match your Prometheus instance
+```
+
+#### Alerting Rules (PrometheusRule)
+
+Built-in alerts for common failure modes:
+
+```yaml
+metrics:
+  prometheusRule:
+    enabled: true
+    labels:
+      release: prometheus
+    additionalRules: []          # add custom rules here
+```
+
+Included alerts:
+- **GraylogAuthProxyDown** — no healthy proxy instances for 5+ minutes (critical)
+- **GraylogAuthProxyHighErrorRate** — >10% provisioning failures (warning)
+- **GraylogAuthProxyHighLatency** — p99 latency > 5s (warning)
+- **GraylogBackendUnreachable** — >50% Graylog API 5xx errors (critical)
+- **GraylogAuthProxySSEConnectionsHigh** — >100 active SSE connections (warning)
+
+#### Grafana Dashboard
+
+Auto-discovered by the Grafana sidecar (requires `grafana_dashboard: "1"` label):
+
+```yaml
+metrics:
+  grafanaDashboard:
+    enabled: true
+    annotations:
+      grafana_folder: "Infrastructure"
+```
+
+Panels: request rate, latency percentiles (p50/p95/p99), auth operations, active SSE connections, Graylog API requests, pod restarts, memory and CPU usage.
+
+### High Availability
+
+#### Pod Disruption Budget
+
+Ensure minimum availability during cluster maintenance:
+
+```yaml
+pdb:
+  enabled: true
+  maxUnavailable: 1              # or use minAvailable: 1
+```
+
+#### Topology Spread
+
+Distribute pods across availability zones:
+
+```yaml
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+```
+
+### Extensibility
+
+#### Extra Volumes and Mounts
+
+Add custom volumes (e.g. additional CA certs, shared config):
+
+```yaml
+extraVolumes:
+  - name: custom-certs
+    secret:
+      secretName: my-custom-certs
+
+extraVolumeMounts:
+  - name: custom-certs
+    mountPath: /etc/custom-certs
+    readOnly: true
+```
+
+#### Flux CD Integration
+
+Add Flux kustomization labels:
+
+```yaml
+flux:
+  enabled: true
+  kustomization:
+    name: graylog-auth-proxy
+    namespace: flux-system
+
+deploymentAnnotations:
+  kustomize.toolkit.fluxcd.io/reconcile: "enabled"
+```
+
 ## Full Example
 
 A complete `values.yaml` for a typical production deployment using ACME TLS, client secret OIDC, ingress with external-dns, and internal CA trust for the Graylog backend:
@@ -328,6 +433,25 @@ autoscaling:
   minReplicas: 2
   maxReplicas: 5
   targetCPUUtilizationPercentage: 80
+
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus
+  prometheusRule:
+    enabled: true
+  grafanaDashboard:
+    enabled: true
 ```
 
 ## Values Reference
@@ -409,4 +533,24 @@ autoscaling:
 | `nodeSelector` | object | `{}` | Node selector |
 | `tolerations` | list | `[]` | Tolerations |
 | `affinity` | object | `{}` | Affinity rules |
+| `topologySpreadConstraints` | list | `[]` | Pod topology spread constraints |
+| `terminationGracePeriodSeconds` | int | `30` | Graceful shutdown timeout |
+| `pdb.enabled` | bool | `false` | Create PodDisruptionBudget |
+| `pdb.minAvailable` | string | `""` | Min available pods (exclusive with maxUnavailable) |
+| `pdb.maxUnavailable` | int | `1` | Max unavailable pods |
+| `metrics.serviceMonitor.enabled` | bool | `false` | Create ServiceMonitor |
+| `metrics.serviceMonitor.interval` | string | `"30s"` | Scrape interval |
+| `metrics.serviceMonitor.labels` | object | `{}` | Extra ServiceMonitor labels |
+| `metrics.prometheusRule.enabled` | bool | `false` | Create PrometheusRule with alerts |
+| `metrics.prometheusRule.labels` | object | `{}` | Extra PrometheusRule labels |
+| `metrics.prometheusRule.additionalRules` | list | `[]` | Custom alerting rules |
+| `metrics.grafanaDashboard.enabled` | bool | `false` | Create Grafana dashboard ConfigMap |
+| `metrics.grafanaDashboard.labels` | object | `{}` | Extra dashboard labels |
+| `metrics.grafanaDashboard.annotations` | object | `{}` | Dashboard annotations (e.g. folder) |
 | `extraEnv` | list | `[]` | Extra environment variables |
+| `extraVolumes` | list | `[]` | Extra pod volumes |
+| `extraVolumeMounts` | list | `[]` | Extra container volume mounts |
+| `deploymentAnnotations` | object | `{}` | Deployment annotations |
+| `flux.enabled` | bool | `false` | Add Flux CD labels |
+| `flux.kustomization.name` | string | `""` | Flux kustomization name |
+| `flux.kustomization.namespace` | string | `"flux-system"` | Flux kustomization namespace |
