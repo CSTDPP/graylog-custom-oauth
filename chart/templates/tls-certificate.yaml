@@ -1,0 +1,88 @@
+{{- if eq .Values.tls.mode "certManager" }}
+###############################################################################
+# cert-manager Certificate with external ClusterIssuer (e.g. ACME / Let's Encrypt)
+###############################################################################
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-tls
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "graylog-auth-proxy.tls.secretName" . }}
+  issuerRef:
+    name: {{ .Values.tls.certManager.clusterIssuerName }}
+    kind: ClusterIssuer
+  duration: {{ .Values.tls.certManager.duration }}
+  renewBefore: {{ .Values.tls.certManager.renewBefore }}
+  dnsNames:
+    {{- /* Include ingress hosts */}}
+    {{- range .Values.ingress.hosts }}
+    - {{ .host | quote }}
+    {{- end }}
+    {{- /* Include service FQDN */}}
+    - {{ printf "%s.%s.svc.cluster.local" (include "graylog-auth-proxy.fullname" .) .Release.Namespace | quote }}
+{{- end }}
+{{- if eq .Values.tls.mode "certManagerSelfSigned" }}
+###############################################################################
+# Self-signed CA chain (4-step: self-signed issuer -> CA cert -> CA issuer -> server cert)
+###############################################################################
+---
+# Step 1: Bootstrap self-signed issuer
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-self-signed
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+# Step 2: CA certificate issued by the self-signed issuer
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-ca
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: {{ include "graylog-auth-proxy.fullname" . }}-ca
+  secretName: {{ include "graylog-auth-proxy.fullname" . }}-ca-tls
+  issuerRef:
+    name: {{ include "graylog-auth-proxy.fullname" . }}-self-signed
+    kind: Issuer
+  duration: {{ .Values.tls.selfSigned.duration }}
+  renewBefore: {{ .Values.tls.selfSigned.renewBefore }}
+---
+# Step 3: CA issuer backed by the CA certificate
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-ca-issuer
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ include "graylog-auth-proxy.fullname" . }}-ca-tls
+---
+# Step 4: Server certificate issued by the CA issuer
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-tls
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "graylog-auth-proxy.tls.secretName" . }}
+  issuerRef:
+    name: {{ include "graylog-auth-proxy.fullname" . }}-ca-issuer
+    kind: Issuer
+  duration: {{ .Values.tls.selfSigned.duration }}
+  renewBefore: {{ .Values.tls.selfSigned.renewBefore }}
+  dnsNames:
+    {{- range .Values.ingress.hosts }}
+    - {{ .host | quote }}
+    {{- end }}
+    - {{ printf "%s.%s.svc.cluster.local" (include "graylog-auth-proxy.fullname" .) .Release.Namespace | quote }}
+{{- end }}

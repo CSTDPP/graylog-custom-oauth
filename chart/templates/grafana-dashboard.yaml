@@ -1,0 +1,91 @@
+{{- if .Values.metrics.grafanaDashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-dashboard
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+    {{- with .Values.metrics.grafanaDashboard.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.metrics.grafanaDashboard.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+data:
+  graylog-auth-proxy.json: |
+    {
+      "annotations": {"list": []},
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "panels": [
+        {
+          "title": "Request Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [{"expr": "sum(rate(proxy_requests_total[5m])) by (status)", "legendFormat": "{{ "{{" }}status{{ "}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "reqps"}}
+        },
+        {
+          "title": "Request Latency (p50 / p95 / p99)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [
+            {"expr": "histogram_quantile(0.50, rate(proxy_request_duration_seconds_bucket[5m]))", "legendFormat": "p50"},
+            {"expr": "histogram_quantile(0.95, rate(proxy_request_duration_seconds_bucket[5m]))", "legendFormat": "p95"},
+            {"expr": "histogram_quantile(0.99, rate(proxy_request_duration_seconds_bucket[5m]))", "legendFormat": "p99"}
+          ],
+          "fieldConfig": {"defaults": {"unit": "s"}}
+        },
+        {
+          "title": "Auth Operations",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "targets": [{"expr": "sum(rate(proxy_auth_operations_total[5m])) by (operation, result)", "legendFormat": "{{ "{{" }}operation{{ "}}" }}/{{ "{{" }}result{{ "}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "ops"}}
+        },
+        {
+          "title": "Active SSE Connections",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 8},
+          "targets": [{"expr": "proxy_sse_connections_active"}],
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 100}]}}}
+        },
+        {
+          "title": "Graylog API Requests",
+          "type": "timeseries",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 8},
+          "targets": [{"expr": "sum(rate(graylog_api_requests_total[5m])) by (operation, status)", "legendFormat": "{{ "{{" }}operation{{ "}}" }}/{{ "{{" }}status{{ "}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "reqps"}}
+        },
+        {
+          "title": "Pod Restarts",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 12},
+          "targets": [{"expr": "sum(kube_pod_container_status_restarts_total{container=\"graylog-auth-proxy\"})"}]
+        },
+        {
+          "title": "Memory Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "targets": [{"expr": "container_memory_working_set_bytes{container=\"graylog-auth-proxy\"}", "legendFormat": "{{ "{{" }}pod{{ "}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "bytes"}}
+        },
+        {
+          "title": "CPU Usage",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "targets": [{"expr": "rate(container_cpu_usage_seconds_total{container=\"graylog-auth-proxy\"}[5m])", "legendFormat": "{{ "{{" }}pod{{ "}}" }}"}],
+          "fieldConfig": {"defaults": {"unit": "short"}}
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["graylog", "auth-proxy", "oauth"],
+      "templating": {"list": []},
+      "time": {"from": "now-1h", "to": "now"},
+      "title": "Graylog Auth Proxy",
+      "uid": "graylog-auth-proxy"
+    }
+{{- end }}

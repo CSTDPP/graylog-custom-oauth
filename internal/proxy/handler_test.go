@@ -65,7 +65,11 @@ func setupHandler(t *testing.T, mock *mockGraylogClient) (*Handler, *session.Man
 	prov := provision.NewProvisioner(mock)
 	metrics := observability.NewMetrics(prometheus.NewRegistry())
 
-	handler := NewHandler(backendURL, mgr, prov, mapper, metrics, nil)
+	headers := HeaderConfig{
+		RemoteUserHeader: "X-Remote-User",
+		StripHeaders:     []string{"X-Remote-User", "X-Remote-Email", "X-Remote-Name"},
+	}
+	handler := NewHandler(backendURL, mgr, prov, mapper, metrics, nil, headers)
 	return handler, mgr, backend
 }
 

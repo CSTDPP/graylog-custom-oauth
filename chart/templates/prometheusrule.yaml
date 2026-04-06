@@ -1,0 +1,67 @@
+{{- if .Values.metrics.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+    {{- with .Values.metrics.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: graylog-auth-proxy
+      rules:
+        - alert: GraylogAuthProxyDown
+          expr: up{job="{{ include "graylog-auth-proxy.fullname" . }}"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Graylog Auth Proxy is down"
+            description: "No healthy proxy instances for more than 5 minutes."
+
+        - alert: GraylogAuthProxyHighErrorRate
+          expr: |
+            rate(proxy_auth_operations_total{operation="provision",result="error"}[5m])
+            / on() rate(proxy_auth_operations_total{operation="provision"}[5m]) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High provisioning error rate (>10%)"
+            description: "More than 10% of user provisioning requests are failing."
+
+        - alert: GraylogAuthProxyHighLatency
+          expr: |
+            histogram_quantile(0.99, rate(proxy_request_duration_seconds_bucket[5m])) > 5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High request latency (p99 > 5s)"
+            description: "99th percentile request latency exceeds 5 seconds."
+
+        - alert: GraylogBackendUnreachable
+          expr: |
+            rate(graylog_api_requests_total{status=~"5.."}[5m])
+            / on() rate(graylog_api_requests_total[5m]) > 0.5
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Graylog backend is unreachable"
+            description: "More than 50% of Graylog API requests are failing with 5xx."
+
+        - alert: GraylogAuthProxySSEConnectionsHigh
+          expr: proxy_sse_connections_active > 100
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High number of active SSE/MCP connections (>100)"
+
+        {{- with .Values.metrics.prometheusRule.additionalRules }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

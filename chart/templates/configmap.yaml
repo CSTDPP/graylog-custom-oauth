@@ -1,0 +1,10 @@
+{{- if not .Values.roleMap.existingConfigMapName }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}-role-map
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+data:
+  {{ .Values.roleMap.configMapKey }}: {{ .Values.roleMap.inline | toJson | quote }}
+{{- end }}

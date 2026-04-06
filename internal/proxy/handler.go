@@ -23,6 +23,14 @@ const (
 	provisionTimeout = 5 * time.Second
 )
 
+// HeaderConfig controls which headers are stripped, injected, and used for
+// the authenticated username.
+type HeaderConfig struct {
+	RemoteUserHeader string
+	StripHeaders     []string
+	InjectHeaders    map[string]string
+}
+
 // Handler is the main HTTP handler that authenticates requests via session
 // cookies, provisions users in Graylog, and proxies traffic to the Graylog
 // backend.
@@ -33,6 +41,7 @@ type Handler struct {
 	metrics     *observability.Metrics
 	proxy       *httputil.ReverseProxy
 	sseHandler  *SSEHandler
+	headers     HeaderConfig
 	loginPath   string
 	logger      *slog.Logger
 }
@@ -47,6 +56,7 @@ func NewHandler(
 	roleMapper *roles.Mapper,
 	metrics *observability.Metrics,
 	tlsConfig *tls.Config,
+	headers HeaderConfig,
 ) *Handler {
 	transport := &http.Transport{
 		TLSClientConfig: tlsConfig,
@@ -70,6 +80,7 @@ func NewHandler(
 		metrics:     metrics,
 		proxy:       proxy,
 		sseHandler:  sseHandler,
+		headers:     headers,
 		loginPath:   loginPath,
 		logger:      slog.Default(),
 	}
@@ -92,14 +103,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.AuthOperationsTotal.WithLabelValues("session_check", "valid").Inc()
 
-	// 2. Strip upstream identity headers to prevent spoofing and inject
-	//    the authenticated identity.
-	r.Header.Del("X-Remote-User")
-	r.Header.Del("X-Remote-Email")
-	r.Header.Del("X-Remote-Name")
-	r.Header.Set("X-Remote-User", sess.Username)
+	// 2. Strip configured headers to prevent spoofing.
+	for _, header := range h.headers.StripHeaders {
+		r.Header.Del(header)
+	}
 
-	// 3. Provision user in Graylog with a bounded timeout.
+	// 3. Inject the authenticated identity header.
+	r.Header.Set(h.headers.RemoteUserHeader, sess.Username)
+
+	// 4. Inject any additional configured headers.
+	for k, v := range h.headers.InjectHeaders {
+		r.Header.Set(k, v)
+	}
+
+	// 5. Provision user in Graylog with a bounded timeout.
 	provCtx, provCancel := context.WithTimeout(r.Context(), provisionTimeout)
 	defer provCancel()
 
@@ -121,7 +138,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.metrics.AuthOperationsTotal.WithLabelValues("provision", "success").Inc()
 
-	// 4. Delegate to SSE handler or standard reverse proxy.
+	// 6. Delegate to SSE handler or standard reverse proxy.
 	recorder := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 
 	if IsSSERequest(r) {
@@ -130,7 +147,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.proxy.ServeHTTP(recorder, r)
 	}
 
-	// 5. Record request metrics.
+	// 7. Record request metrics.
 	duration := time.Since(start).Seconds()
 	statusStr := strconv.Itoa(recorder.statusCode)
 	h.metrics.RequestsTotal.WithLabelValues(r.Method, pathPattern, statusStr).Inc()

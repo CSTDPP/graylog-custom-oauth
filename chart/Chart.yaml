@@ -1,0 +1,16 @@
+apiVersion: v2
+name: graylog-auth-proxy
+description: OAuth2/OIDC reverse proxy for Graylog with automatic user provisioning and role sync
+type: application
+version: 0.1.0
+appVersion: "latest"
+home: https://github.com/CSTDPP/graylog-custom-oauth
+sources:
+  - https://github.com/CSTDPP/graylog-custom-oauth
+keywords:
+  - graylog
+  - oauth2
+  - oidc
+  - proxy
+  - entra-id
+  - authentication
