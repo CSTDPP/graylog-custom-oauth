@@ -1,0 +1,199 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "graylog-auth-proxy.fullname" . }}
+  labels:
+    {{- include "graylog-auth-proxy.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "graylog-auth-proxy.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "graylog-auth-proxy.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if .Values.workloadIdentity.enabled }}
+        {{- toYaml .Values.workloadIdentity.podLabels | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "graylog-auth-proxy.serviceAccountName" . }}
+      {{- if .Values.serviceAccount.automount }}
+      automountServiceAccountToken: true
+      {{- else }}
+      automountServiceAccountToken: false
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "graylog-auth-proxy.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - name: https
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: ENTRA_TENANT_ID
+              value: {{ .Values.oidc.tenantId | quote }}
+            - name: ENTRA_CLIENT_ID
+              value: {{ .Values.oidc.clientId | quote }}
+            - name: ENTRA_REDIRECT_URL
+              value: {{ .Values.oidc.redirectUrl | quote }}
+            - name: OIDC_MODE
+              value: {{ .Values.oidc.mode | quote }}
+            - name: GRAYLOG_URL
+              value: {{ .Values.graylog.url | quote }}
+            - name: LISTEN_ADDR
+              value: ":{{ .Values.service.port }}"
+            - name: TLS_CERT_FILE
+              value: "/tls/tls.crt"
+            - name: TLS_KEY_FILE
+              value: "/tls/tls.key"
+            - name: DEFAULT_ROLE
+              value: {{ .Values.roleMap.defaultRole | quote }}
+            - name: SESSION_MAX_AGE
+              value: {{ .Values.session.maxAge | quote }}
+            - name: REMOTE_USER_HEADER
+              value: {{ .Values.headers.remoteUserHeader | quote }}
+            {{- if .Values.headers.strip }}
+            - name: STRIP_HEADERS
+              value: {{ join "," .Values.headers.strip | quote }}
+            {{- end }}
+            {{- if .Values.headers.inject }}
+            - name: INJECT_HEADERS
+              value: {{ .Values.headers.inject | toJson | quote }}
+            {{- end }}
+            {{- if .Values.graylog.caCert.enabled }}
+            - name: GRAYLOG_CA_CERT_FILE
+              value: "/ca/ca.crt"
+            {{- end }}
+            {{- if eq .Values.oidc.mode "secret" }}
+            - name: ENTRA_CLIENT_SECRET_FILE
+              value: "/run/secrets/oidc/{{ .Values.oidc.existingSecretKey }}"
+            {{- end }}
+            - name: SESSION_KEY_FILE
+              value: "/run/secrets/session/{{ .Values.session.existingSecretKey }}"
+            - name: GRAYLOG_SERVICE_TOKEN_FILE
+              value: "/run/secrets/graylog/{{ .Values.graylog.serviceToken.existingSecretKey }}"
+            - name: ROLE_MAP
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "graylog-auth-proxy.roleMapConfigMapName" . }}
+                  key: {{ .Values.roleMap.configMapKey }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+            {{- if eq .Values.oidc.mode "secret" }}
+            - name: oidc-secret
+              mountPath: /run/secrets/oidc
+              readOnly: true
+            {{- end }}
+            - name: session-secret
+              mountPath: /run/secrets/session
+              readOnly: true
+            - name: graylog-token
+              mountPath: /run/secrets/graylog
+              readOnly: true
+            {{- if .Values.graylog.caCert.enabled }}
+            - name: graylog-ca
+              mountPath: /ca
+              readOnly: true
+            {{- end }}
+          {{- if .Values.livenessProbe.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | int }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds | int }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | int }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold | int }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold | int }}
+          {{- end }}
+          {{- if .Values.readinessProbe.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | int }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds | int }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | int }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold | int }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold | int }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: tls
+          secret:
+            secretName: {{ include "graylog-auth-proxy.tls.secretName" . }}
+        {{- if eq .Values.oidc.mode "secret" }}
+        - name: oidc-secret
+          secret:
+            secretName: {{ .Values.oidc.existingSecretName }}
+            items:
+              - key: {{ .Values.oidc.existingSecretKey }}
+                path: {{ .Values.oidc.existingSecretKey }}
+        {{- end }}
+        - name: session-secret
+          secret:
+            secretName: {{ include "graylog-auth-proxy.sessionSecretName" . }}
+            items:
+              - key: {{ .Values.session.existingSecretKey }}
+                path: {{ .Values.session.existingSecretKey }}
+        - name: graylog-token
+          secret:
+            secretName: {{ .Values.graylog.serviceToken.existingSecretName }}
+            items:
+              - key: {{ .Values.graylog.serviceToken.existingSecretKey }}
+                path: {{ .Values.graylog.serviceToken.existingSecretKey }}
+        {{- if .Values.graylog.caCert.enabled }}
+        - name: graylog-ca
+          secret:
+            secretName: {{ .Values.graylog.caCert.secretName }}
+            items:
+              - key: {{ .Values.graylog.caCert.key }}
+                path: ca.crt
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

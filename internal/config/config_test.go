@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -43,6 +45,9 @@ func TestLoad_ValidConfig(t *testing.T) {
 	assert.Equal(t, "/etc/tls/key.pem", cfg.TLSKeyFile)
 	assert.Len(t, cfg.SessionKey, 32)
 	assert.Equal(t, map[string]string{"graylog-admin": "Admin", "graylog-reader": "Reader"}, cfg.RoleMap)
+	assert.Equal(t, "secret", cfg.OIDCMode)
+	assert.Equal(t, "X-Remote-User", cfg.RemoteUserHeader)
+	assert.Equal(t, []string{"X-Remote-User", "X-Remote-Email", "X-Remote-Name"}, cfg.StripHeaders)
 }
 
 func TestLoad_Defaults(t *testing.T) {
@@ -54,11 +59,12 @@ func TestLoad_Defaults(t *testing.T) {
 	assert.Equal(t, ":8443", cfg.ListenAddr)
 	assert.Equal(t, "Reader", cfg.DefaultRole)
 	assert.Equal(t, 8*time.Hour, cfg.SessionMaxAge)
+	assert.Equal(t, "secret", cfg.OIDCMode)
+	assert.Equal(t, "X-Remote-User", cfg.RemoteUserHeader)
 }
 
 func TestLoad_MissingRequired(t *testing.T) {
 	setRequiredEnv(t)
-	// Unset one required variable.
 	t.Setenv("ENTRA_TENANT_ID", "")
 
 	_, err := Load()
@@ -77,7 +83,6 @@ func TestLoad_InvalidSessionKey(t *testing.T) {
 
 func TestLoad_InvalidSessionKeyNotHex(t *testing.T) {
 	setRequiredEnv(t)
-	// 64 characters but not valid hex (contains 'g' and 'z').
 	t.Setenv("SESSION_KEY", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
 
 	_, err := Load()
@@ -110,4 +115,62 @@ func TestLoad_CustomSessionMaxAge(t *testing.T) {
 	cfg, err := Load()
 	require.NoError(t, err)
 	assert.Equal(t, 2*time.Hour, cfg.SessionMaxAge)
+}
+
+func TestLoad_WorkloadIdentityMode(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("OIDC_MODE", "workloadIdentity")
+	t.Setenv("ENTRA_CLIENT_SECRET", "") // not required in workload identity mode
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "workloadIdentity", cfg.OIDCMode)
+	assert.Empty(t, cfg.EntraClientSecret)
+}
+
+func TestLoad_SecretFromFile(t *testing.T) {
+	setRequiredEnv(t)
+
+	// Write a secret to a temp file.
+	dir := t.TempDir()
+	secretFile := filepath.Join(dir, "client-secret")
+	err := os.WriteFile(secretFile, []byte("file-based-secret\n"), 0o600)
+	require.NoError(t, err)
+
+	// Use _FILE variant instead of direct env var.
+	t.Setenv("ENTRA_CLIENT_SECRET", "")
+	t.Setenv("ENTRA_CLIENT_SECRET_FILE", secretFile)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "file-based-secret", cfg.EntraClientSecret)
+}
+
+func TestLoad_SessionKeyFromFile(t *testing.T) {
+	setRequiredEnv(t)
+
+	dir := t.TempDir()
+	keyFile := filepath.Join(dir, "session-key")
+	err := os.WriteFile(keyFile, []byte(validSessionKey+"\n"), 0o600)
+	require.NoError(t, err)
+
+	t.Setenv("SESSION_KEY", "")
+	t.Setenv("SESSION_KEY_FILE", keyFile)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Len(t, cfg.SessionKey, 32)
+}
+
+func TestLoad_CustomHeaders(t *testing.T) {
+	setRequiredEnv(t)
+	t.Setenv("REMOTE_USER_HEADER", "X-Forwarded-User")
+	t.Setenv("STRIP_HEADERS", "X-Forwarded-User, X-Custom")
+	t.Setenv("INJECT_HEADERS", `{"X-Source":"auth-proxy"}`)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+	assert.Equal(t, "X-Forwarded-User", cfg.RemoteUserHeader)
+	assert.Equal(t, []string{"X-Forwarded-User", "X-Custom"}, cfg.StripHeaders)
+	assert.Equal(t, map[string]string{"X-Source": "auth-proxy"}, cfg.InjectHeaders)
 }

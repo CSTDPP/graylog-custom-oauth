@@ -47,6 +47,7 @@ func main() {
 		"tenant_id", cfg.EntraTenantID,
 		"client_id", cfg.EntraClientID,
 		"redirect_url", cfg.EntraRedirectURL,
+		"oidc_mode", cfg.OIDCMode,
 		"default_role", cfg.DefaultRole,
 		"session_max_age", cfg.SessionMaxAge.String(),
 		"client_secret", "REDACTED",
@@ -114,8 +115,13 @@ func main() {
 		}
 	}
 
-	// Create reverse proxy handler.
-	proxyHandler := proxy.NewHandler(graylogURL, sessions, provisioner, roleMapper, metrics, backendTLSConfig)
+	// Create reverse proxy handler with configurable headers.
+	headerCfg := proxy.HeaderConfig{
+		RemoteUserHeader: cfg.RemoteUserHeader,
+		StripHeaders:     cfg.StripHeaders,
+		InjectHeaders:    cfg.InjectHeaders,
+	}
+	proxyHandler := proxy.NewHandler(graylogURL, sessions, provisioner, roleMapper, metrics, backendTLSConfig, headerCfg)
 
 	// Set up HTTP routes.
 	mux := http.NewServeMux()

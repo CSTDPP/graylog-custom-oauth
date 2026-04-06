@@ -1,0 +1,174 @@
+# -- Number of proxy replicas
+replicaCount: 1
+
+image:
+  # -- Container image repository
+  repository: ghcr.io/cstdpp/graylog-auth-proxy
+  # -- Image tag (defaults to Chart appVersion)
+  tag: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# -- OIDC / Microsoft Entra ID configuration
+oidc:
+  # -- Entra tenant ID
+  tenantId: ""
+  # -- App registration client ID
+  clientId: ""
+  # -- OAuth2 redirect URL (e.g. https://graylog.company.com/oauth/callback)
+  redirectUrl: ""
+  # -- Authentication mode: "secret" (client secret) or "workloadIdentity" (Azure federated credentials)
+  mode: "secret"
+  # -- Existing Kubernetes Secret containing the OIDC client secret
+  existingSecretName: ""
+  # -- Key within the secret
+  existingSecretKey: "client-secret"
+
+# -- Azure Workload Identity configuration
+workloadIdentity:
+  # -- Enable workload identity (sets pod labels and SA annotations)
+  enabled: false
+  serviceAccountAnnotations:
+    azure.workload.identity/client-id: ""
+  podLabels:
+    azure.workload.identity/use: "true"
+
+# -- Session encryption configuration
+session:
+  # -- Existing Secret containing the session key
+  existingSecretName: ""
+  # -- Key within the secret
+  existingSecretKey: "session-key"
+  # -- Inline session key (32-byte hex string). Chart creates a Secret if existingSecretName is empty.
+  key: ""
+  # -- Session cookie max age
+  maxAge: "8h"
+
+# -- Graylog backend configuration
+graylog:
+  # -- Graylog server URL (e.g. https://graylog-svc.graylog:9000)
+  url: ""
+  serviceToken:
+    # -- Existing Secret containing the Graylog service account token
+    existingSecretName: ""
+    # -- Key within the secret
+    existingSecretKey: "service-token"
+  caCert:
+    # -- Enable custom CA trust for Graylog backend TLS
+    enabled: false
+    # -- Secret containing the CA certificate
+    secretName: ""
+    # -- Key within the secret
+    key: "ca.crt"
+
+# -- Role mapping configuration
+roleMap:
+  # -- Inline role map (Entra role -> Graylog role). Generates a ConfigMap.
+  inline: {}
+  #   graylog-admin: "Admin"
+  #   graylog-analyst: "Analyst"
+  #   graylog-reader: "Reader"
+  # -- Reference an existing ConfigMap instead of generating one
+  existingConfigMapName: ""
+  # -- Key in the ConfigMap containing the JSON role map
+  configMapKey: "ROLE_MAP"
+  # -- Default Graylog role when no mapping matches
+  defaultRole: "Reader"
+
+# -- Header injection configuration
+headers:
+  # -- Header name for the authenticated username
+  remoteUserHeader: "X-Remote-User"
+  # -- Additional headers to inject on every proxied request
+  inject: {}
+  #   X-Custom-Header: "value"
+  # -- Headers to strip from incoming requests (prevent spoofing)
+  strip:
+    - "X-Remote-User"
+    - "X-Remote-Email"
+    - "X-Remote-Name"
+
+# -- TLS configuration for the proxy's HTTPS listener
+tls:
+  # -- TLS mode: "static" (existing secret), "certManager" (ACME), "certManagerSelfSigned" (internal CA)
+  mode: "static"
+  # -- For mode=static: name of existing TLS Secret
+  secretName: ""
+  certManager:
+    # -- ClusterIssuer name for ACME certificates (e.g. "letsencrypt-prod")
+    clusterIssuerName: ""
+    duration: "8760h"
+    renewBefore: "720h"
+  selfSigned:
+    duration: "8760h"
+    renewBefore: "720h"
+
+# -- Kubernetes Service configuration
+service:
+  # -- Service type: ClusterIP or LoadBalancer
+  type: ClusterIP
+  # -- Service port
+  port: 8443
+  # -- Service annotations (e.g. external-dns, cloud provider LB config)
+  annotations: {}
+
+# -- Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  #   - host: graylog.company.com
+  #     paths:
+  #       - path: /
+  #         pathType: ImplementationSpecific
+  tls: []
+  #   - secretName: graylog-proxy-tls
+  #     hosts:
+  #       - graylog.company.com
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  nameOverride: ""
+
+podAnnotations: {}
+podLabels: {}
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 64Mi
+
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 3
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+  successThreshold: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# -- Extra environment variables (list format: [{name, value}] or [{name, valueFrom}])
+extraEnv: []
