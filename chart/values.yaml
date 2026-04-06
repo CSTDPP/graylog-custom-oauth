@@ -231,6 +231,16 @@ extraVolumeMounts: []
 #     mountPath: /etc/custom-certs
 #     readOnly: true
 
+# -- Helm test configuration
+test:
+  # -- Enable the helm test pod
+  enabled: true
+  image:
+    # -- Test image repository (must have wget or curl)
+    repository: "busybox"
+    # -- Test image tag
+    tag: "1.36"
+
 # -- Deployment annotations (e.g. for Flux, ArgoCD)
 deploymentAnnotations: {}
 
