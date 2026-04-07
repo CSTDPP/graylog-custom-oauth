@@ -194,7 +194,8 @@ func TestIntegration_UserProvisioning(t *testing.T) {
 		err := client.CreateUser(ctx, &graylog.CreateUserRequest{
 			Username:    testUsername,
 			Email:       testUsername + "@example.com",
-			FullName:    "Integration Test User",
+			FirstName:   "Integration",
+			LastName:    "Test User",
 			Password:    "S3cureP@ssword!",
 			Roles:       []string{"Reader"},
 			Permissions: []string{"*"},
@@ -209,7 +210,8 @@ func TestIntegration_UserProvisioning(t *testing.T) {
 		require.NotNil(t, user, "expected user to exist after creation")
 		assert.Equal(t, testUsername, user.Username)
 		assert.Equal(t, testUsername+"@example.com", user.Email)
-		assert.Equal(t, "Integration Test User", user.FullName)
+		assert.Equal(t, "Integration", user.FirstName)
+		assert.Equal(t, "Test User", user.LastName)
 		assert.Contains(t, user.Roles, "Reader")
 	})
 

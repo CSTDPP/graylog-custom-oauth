@@ -25,17 +25,19 @@ const maxAttempts = 4
 
 // User represents a Graylog user as returned by the REST API.
 type User struct {
-	Username string   `json:"username"`
-	Email    string   `json:"email"`
-	FullName string   `json:"full_name"`
-	Roles    []string `json:"roles"`
+	Username  string   `json:"username"`
+	Email     string   `json:"email"`
+	FirstName string   `json:"first_name"`
+	LastName  string   `json:"last_name"`
+	Roles     []string `json:"roles"`
 }
 
 // CreateUserRequest is the payload for creating a new Graylog user.
 type CreateUserRequest struct {
 	Username    string   `json:"username"`
 	Email       string   `json:"email"`
-	FullName    string   `json:"full_name"`
+	FirstName   string   `json:"first_name"`
+	LastName    string   `json:"last_name"`
 	Password    string   `json:"password"`
 	Roles       []string `json:"roles"`
 	Permissions []string `json:"permissions"`

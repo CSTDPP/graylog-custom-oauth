@@ -7,9 +7,24 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/CSTDPP/graylog-auth-proxy/internal/graylog"
 )
+
+// splitName splits a display name into first and last name. If the name has
+// no spaces, it is used as both first and last name (Graylog requires both).
+func splitName(name string) (first, last string) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "user", "user"
+	}
+	parts := strings.SplitN(name, " ", 2)
+	if len(parts) == 1 {
+		return parts[0], parts[0]
+	}
+	return parts[0], strings.TrimSpace(parts[1])
+}
 
 // UserInfo contains the identity and role information needed to provision a
 // Graylog user. Roles must already be mapped to Graylog role names.
@@ -59,10 +74,12 @@ func (p *Provisioner) Provision(ctx context.Context, info UserInfo) error {
 			return fmt.Errorf("generating password for user %s: %w", info.Username, genErr)
 		}
 
+		first, last := splitName(info.Name)
 		createReq := &graylog.CreateUserRequest{
 			Username:    info.Username,
 			Email:       info.Email,
-			FullName:    info.Name,
+			FirstName:   first,
+			LastName:    last,
 			Password:    password,
 			Roles:       info.Roles,
 			Permissions: []string{},
