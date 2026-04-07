@@ -218,7 +218,8 @@ func (c *Client) doWithRetry(ctx context.Context, method, reqURL string, jsonBod
 			return nil, nil, fmt.Errorf("building request: %w", err)
 		}
 
-		req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+		req.SetBasicAuth(c.serviceToken, "token")
+		req.Header.Set("X-Requested-By", "graylog-auth-proxy")
 		req.Header.Set("Accept", "application/json")
 		if jsonBody != nil {
 			req.Header.Set("Content-Type", "application/json")
