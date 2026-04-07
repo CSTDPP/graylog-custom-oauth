@@ -122,6 +122,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		state,
 		oauth2.SetAuthURLParam("code_challenge", challenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
+		oauth2.SetAuthURLParam("prompt", "select_account"),
 	)
 
 	h.logger.DebugContext(r.Context(), "redirecting to authorization endpoint",
