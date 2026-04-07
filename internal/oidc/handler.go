@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
 
 	coreoidc "github.com/coreos/go-oidc/v3/oidc"
@@ -238,21 +237,14 @@ func (h *Handler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-// HandleLogout clears the session cookie and redirects the user to the Entra
-// logout endpoint.
+// HandleLogout clears the proxy session cookie and redirects back to the root.
+// The Entra SSO session is intentionally left intact — combined with the
+// prompt=select_account parameter on the next auth request, this lets the
+// user pick a different identity without being fully signed out of Entra.
 func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	h.sessions.Clear(w)
-
-	logoutURL := fmt.Sprintf(
-		"https://login.microsoftonline.com/%s/oauth2/v2.0/logout?post_logout_redirect_uri=%s",
-		h.tenantID,
-		url.QueryEscape(h.redirectURL),
-	)
-
-	h.logger.DebugContext(r.Context(), "redirecting to logout endpoint",
-		slog.String("logout_url", logoutURL))
-
-	http.Redirect(w, r, logoutURL, http.StatusFound)
+	h.logger.DebugContext(r.Context(), "cleared proxy session, redirecting to /")
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 // randomHex generates n random bytes and returns them as a hex-encoded string.
