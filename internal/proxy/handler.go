@@ -124,7 +124,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Username: sess.Username,
 		Email:    sess.Email,
 		Name:     sess.Name,
-		Roles:    sess.Roles,
+		Roles:    h.roleMapper.Map(sess.Roles),
 	}
 
 	if provErr := h.provisioner.Provision(provCtx, info); provErr != nil {
