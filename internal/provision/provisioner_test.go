@@ -38,7 +38,8 @@ func TestProvision_UserExists_OnlyUpdatesRoles(t *testing.T) {
 			return &graylog.User{
 				Username: "alice",
 				Email:    "alice@example.com",
-				FullName: "Alice",
+				FirstName: "Alice",
+				LastName:  "User",
 				Roles:    []string{"Reader"},
 			}, nil
 		},
