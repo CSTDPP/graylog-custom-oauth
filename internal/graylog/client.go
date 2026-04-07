@@ -151,24 +151,57 @@ func (c *Client) CreateUser(ctx context.Context, req *CreateUserRequest) error {
 	return nil
 }
 
-// UpdateUserRoles updates the roles for an existing Graylog user.
+// UpdateUserRoles synchronises a user's roles to exactly the given set by
+// using Graylog's role-membership endpoints. PUT /api/users/{name} requires
+// the full user payload and rejects partial updates with HTTP 500, so we
+// compute the add/remove diff against the user's current roles instead.
 func (c *Client) UpdateUserRoles(ctx context.Context, username string, roles []string) error {
-	reqURL := fmt.Sprintf("%s/api/users/%s", c.baseURL, url.PathEscape(username))
-
-	payload, err := json.Marshal(map[string][]string{"roles": roles})
+	user, err := c.GetUser(ctx, username)
 	if err != nil {
-		return fmt.Errorf("marshaling update roles request: %w", err)
+		return fmt.Errorf("fetching current roles for user %s: %w", username, err)
+	}
+	if user == nil {
+		return fmt.Errorf("updating roles for user %s: user not found", username)
 	}
 
-	resp, body, err := c.doWithRetry(ctx, http.MethodPut, reqURL, payload)
-	if err != nil {
-		return fmt.Errorf("updating roles for user %s: %w", username, err)
+	desired := make(map[string]bool, len(roles))
+	for _, r := range roles {
+		desired[r] = true
+	}
+	current := make(map[string]bool, len(user.Roles))
+	for _, r := range user.Roles {
+		current[r] = true
 	}
 
+	for r := range desired {
+		if current[r] {
+			continue
+		}
+		if err := c.modifyRoleMembership(ctx, http.MethodPut, r, username); err != nil {
+			return fmt.Errorf("adding user %s to role %s: %w", username, r, err)
+		}
+	}
+	for r := range current {
+		if desired[r] {
+			continue
+		}
+		if err := c.modifyRoleMembership(ctx, http.MethodDelete, r, username); err != nil {
+			return fmt.Errorf("removing user %s from role %s: %w", username, r, err)
+		}
+	}
+	return nil
+}
+
+func (c *Client) modifyRoleMembership(ctx context.Context, method, role, username string) error {
+	reqURL := fmt.Sprintf("%s/api/roles/%s/members/%s",
+		c.baseURL, url.PathEscape(role), url.PathEscape(username))
+	resp, body, err := c.doWithRetry(ctx, method, reqURL, nil)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("updating roles for user %s: unexpected status %d: %s", username, resp.StatusCode, truncateBody(body))
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, truncateBody(body))
 	}
-
 	return nil
 }
 
