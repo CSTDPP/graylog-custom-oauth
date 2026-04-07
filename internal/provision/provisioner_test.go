@@ -36,11 +36,11 @@ func TestProvision_UserExists_OnlyUpdatesRoles(t *testing.T) {
 	mock := &mockGraylogClient{
 		getUser: func(_ context.Context, _ string) (*graylog.User, error) {
 			return &graylog.User{
-				Username: "alice",
-				Email:    "alice@example.com",
+				Username:  "alice",
+				Email:     "alice@example.com",
 				FirstName: "Alice",
 				LastName:  "User",
-				Roles:    []string{"Reader"},
+				Roles:     []string{"Reader"},
 			}, nil
 		},
 		createUser: func(_ context.Context, _ *graylog.CreateUserRequest) error {
