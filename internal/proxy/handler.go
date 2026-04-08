@@ -3,13 +3,17 @@ package proxy
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/CSTDPP/graylog-auth-proxy/internal/observability"
@@ -21,6 +25,7 @@ import (
 const (
 	loginPath        = "/oauth/login"
 	provisionTimeout = 5 * time.Second
+	provisionTTL     = 10 * time.Minute
 )
 
 // HeaderConfig controls which headers are stripped, injected, and used for
@@ -44,6 +49,8 @@ type Handler struct {
 	headers     HeaderConfig
 	loginPath   string
 	logger      *slog.Logger
+
+	provisionCache sync.Map // map[string]time.Time, key = username+roles hash
 }
 
 // NewHandler creates a Handler that proxies authenticated requests to
@@ -120,23 +127,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	provCtx, provCancel := context.WithTimeout(r.Context(), provisionTimeout)
 	defer provCancel()
 
-	info := provision.UserInfo{
-		Username: sess.Username,
-		Email:    sess.Email,
-		Name:     sess.Name,
-		Roles:    h.roleMapper.Map(sess.Roles),
+	mappedRoles := h.roleMapper.Map(sess.Roles)
+	cacheKey := provisionCacheKey(sess.Username, mappedRoles)
+	if !h.provisionFresh(cacheKey) {
+		info := provision.UserInfo{
+			Username: sess.Username,
+			Email:    sess.Email,
+			Name:     sess.Name,
+			Roles:    mappedRoles,
+		}
+		if provErr := h.provisioner.Provision(provCtx, info); provErr != nil {
+			h.logger.ErrorContext(r.Context(), "user provisioning failed",
+				slog.String("username", sess.Username),
+				slog.String("error", provErr.Error()))
+			h.metrics.AuthOperationsTotal.WithLabelValues("provision", "error").Inc()
+			http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
+			return
+		}
+		h.provisionCache.Store(cacheKey, time.Now())
+		h.metrics.AuthOperationsTotal.WithLabelValues("provision", "success").Inc()
+	} else {
+		h.metrics.AuthOperationsTotal.WithLabelValues("provision", "cached").Inc()
 	}
-
-	if provErr := h.provisioner.Provision(provCtx, info); provErr != nil {
-		h.logger.ErrorContext(r.Context(), "user provisioning failed",
-			slog.String("username", sess.Username),
-			slog.String("error", provErr.Error()))
-		h.metrics.AuthOperationsTotal.WithLabelValues("provision", "error").Inc()
-		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
-		return
-	}
-
-	h.metrics.AuthOperationsTotal.WithLabelValues("provision", "success").Inc()
 
 	// 6. Delegate to SSE handler or standard reverse proxy.
 	recorder := &statusRecorder{ResponseWriter: w, statusCode: http.StatusOK}
@@ -173,6 +185,38 @@ func (sr *statusRecorder) WriteHeader(code int) {
 func (sr *statusRecorder) Flush() {
 	if f, ok := sr.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
+	}
+}
+
+// provisionFresh reports whether the user has been provisioned within
+// provisionTTL. Stale entries are evicted on access.
+func (h *Handler) provisionFresh(key string) bool {
+	v, ok := h.provisionCache.Load(key)
+	if !ok {
+		return false
+	}
+	t, ok := v.(time.Time)
+	if !ok || time.Since(t) > provisionTTL {
+		h.provisionCache.Delete(key)
+		return false
+	}
+	return true
+}
+
+// provisionCacheKey returns a stable key for username + role set so any
+// change in role mapping forces a re-provision.
+func provisionCacheKey(username string, roles []string) string {
+	sorted := append([]string(nil), roles...)
+	sortStrings(sorted)
+	sum := sha256.Sum256([]byte(strings.Join(sorted, ",")))
+	return username + "|" + hex.EncodeToString(sum[:8])
+}
+
+func sortStrings(s []string) {
+	for i := 1; i < len(s); i++ {
+		for j := i; j > 0 && s[j-1] > s[j]; j-- {
+			s[j-1], s[j] = s[j], s[j-1]
+		}
 	}
 }
 
