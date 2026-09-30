@@ -47,7 +47,15 @@ func TestLoad_ValidConfig(t *testing.T) {
 	assert.Equal(t, map[string]string{"graylog-admin": "Admin", "graylog-reader": "Reader"}, cfg.RoleMap)
 	assert.Equal(t, "secret", cfg.OIDCMode)
 	assert.Equal(t, "X-Remote-User", cfg.RemoteUserHeader)
-	assert.Equal(t, []string{"X-Remote-User", "X-Remote-Email", "X-Remote-Name"}, cfg.StripHeaders)
+	assert.Equal(t, []string{
+		"Remote-User",
+		"X-Remote-User",
+		"X-Remote-Email",
+		"X-Remote-Name",
+		"X-Forwarded-User",
+		"X-Auth-Request-User",
+		"X-Authenticated-User",
+	}, cfg.StripHeaders)
 }
 
 func TestLoad_Defaults(t *testing.T) {
@@ -173,4 +181,31 @@ func TestLoad_CustomHeaders(t *testing.T) {
 	assert.Equal(t, "X-Forwarded-User", cfg.RemoteUserHeader)
 	assert.Equal(t, []string{"X-Forwarded-User", "X-Custom"}, cfg.StripHeaders)
 	assert.Equal(t, map[string]string{"X-Source": "auth-proxy"}, cfg.InjectHeaders)
+}
+
+// TestLoad_DefaultStripHeaders_CoversTrustedHeaderNames guards the security
+// property the default list exists for: any header a backend might treat as an
+// authenticated identity must be stripped from client requests. "Remote-User"
+// is the conventional name for Graylog's Trusted HTTP Header authenticator and
+// was missing from this list, so a Graylog configured with that spelling would
+// have accepted a client-supplied value.
+func TestLoad_DefaultStripHeaders_CoversTrustedHeaderNames(t *testing.T) {
+	setRequiredEnv(t)
+
+	cfg, err := Load()
+	require.NoError(t, err)
+
+	for _, name := range []string{
+		"Remote-User",
+		"X-Remote-User",
+		"X-Forwarded-User",
+		"X-Auth-Request-User",
+		"X-Authenticated-User",
+	} {
+		assert.Contains(t, cfg.StripHeaders, name,
+			"%s must be stripped: a backend trusting it would accept a spoofed identity", name)
+	}
+
+	assert.Contains(t, cfg.StripHeaders, cfg.RemoteUserHeader,
+		"the injected identity header must itself be stripped from incoming requests")
 }

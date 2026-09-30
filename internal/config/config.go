@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -34,8 +35,29 @@ type Config struct {
 
 	// Header configuration
 	RemoteUserHeader string   // default "X-Remote-User"
-	StripHeaders     []string // default ["X-Remote-User", "X-Remote-Email", "X-Remote-Name"]
+	StripHeaders     []string // default: see defaultStripHeaders
 	InjectHeaders    map[string]string
+}
+
+// defaultStripHeaders is the set of request headers removed from every
+// incoming request before it is forwarded.
+//
+// It is deliberately a superset of the header this proxy itself injects: a
+// backend that trusts a header name we do not strip turns any client into an
+// authenticated user. "Remote-User" in particular is the conventional name for
+// Graylog's Trusted HTTP Header authenticator, so it must be stripped even
+// though RemoteUserHeader defaults to the "X-" prefixed spelling.
+//
+// Overriding STRIP_HEADERS replaces this list rather than extending it; any
+// override should stay a superset of whatever the backend trusts.
+var defaultStripHeaders = []string{
+	"Remote-User",
+	"X-Remote-User",
+	"X-Remote-Email",
+	"X-Remote-Name",
+	"X-Forwarded-User",
+	"X-Auth-Request-User",
+	"X-Authenticated-User",
 }
 
 // Load reads configuration from environment variables, validates all required
@@ -136,7 +158,7 @@ func Load() (*Config, error) {
 			cfg.StripHeaders[i] = strings.TrimSpace(cfg.StripHeaders[i])
 		}
 	} else {
-		cfg.StripHeaders = []string{"X-Remote-User", "X-Remote-Email", "X-Remote-Name"}
+		cfg.StripHeaders = slices.Clone(defaultStripHeaders)
 	}
 
 	// Parse INJECT_HEADERS (JSON object).

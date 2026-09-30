@@ -82,11 +82,18 @@ headers:
   # -- Additional headers to inject on every proxied request
   inject: {}
   #   X-Custom-Header: "value"
-  # -- Headers to strip from incoming requests (prevent spoofing)
+  # -- Headers to strip from incoming requests (prevent spoofing).
+  # Keep this a superset of every header the backend might trust as an
+  # identity: "Remote-User" is the conventional name for Graylog's
+  # Trusted HTTP Header authenticator. Setting this replaces the list.
   strip:
+    - "Remote-User"
     - "X-Remote-User"
     - "X-Remote-Email"
     - "X-Remote-Name"
+    - "X-Forwarded-User"
+    - "X-Auth-Request-User"
+    - "X-Authenticated-User"
 
 # -- TLS configuration for the proxy's HTTPS listener
 tls:

@@ -102,7 +102,7 @@ Internet
 | **Role Mapper** | Translates `roles` claim from JWT into Graylog role names via config map |
 | **Graylog Provisioner** | Creates missing users, syncs roles on every login via Graylog REST API |
 | **Session Manager** | Issues signed + encrypted session cookie (AES-GCM); stateless, no Redis |
-| **Header Injector** | Strips any incoming `X-Remote-User` header, injects validated username |
+| **Header Injector** | Strips every header a backend might trust as an identity (incl. `Remote-User`), injects validated username |
 | **Reverse Proxy** | Standard `httputil.ReverseProxy` for web traffic; `io.Copy` for SSE streams |
 
 ### Microsoft Entra ID
@@ -170,7 +170,7 @@ MCP sessions cost ~8MB RAM. Python async workers under similar load require sign
 | Control | Implementation |
 |---|---|
 | TLS everywhere | Public → Traefik → Proxy → Graylog, all HTTPS |
-| Header spoofing prevention | Proxy strips `X-Remote-User` before forwarding |
+| Header spoofing prevention | Proxy strips all trusted-identity headers (`Remote-User`, `X-Remote-*`, `X-Forwarded-User`, …) before forwarding |
 | Token validation | Full JWKS signature check, not just decode |
 | PKCE | Prevents auth code interception attacks |
 | Session security | AES-GCM encrypted + HMAC-SHA256 signed cookie |

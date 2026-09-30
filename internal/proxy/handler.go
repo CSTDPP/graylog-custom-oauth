@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -206,18 +207,9 @@ func (h *Handler) provisionFresh(key string) bool {
 // provisionCacheKey returns a stable key for username + role set so any
 // change in role mapping forces a re-provision.
 func provisionCacheKey(username string, roles []string) string {
-	sorted := append([]string(nil), roles...)
-	sortStrings(sorted)
+	sorted := slices.Sorted(slices.Values(roles))
 	sum := sha256.Sum256([]byte(strings.Join(sorted, ",")))
 	return username + "|" + hex.EncodeToString(sum[:8])
-}
-
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j-1] > s[j]; j-- {
-			s[j-1], s[j] = s[j], s[j-1]
-		}
-	}
 }
 
 // normalizePathPattern reduces a URL path to a pattern suitable for use as a
