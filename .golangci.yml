@@ -12,6 +12,15 @@ linters:
     - gocritic
     - exhaustive
     - wrapcheck
+  exclusions:
+    rules:
+      # The session tests deliberately construct cookies without Secure /
+      # HttpOnly / SameSite: they exercise the tamper and malformed-value
+      # decode paths, so the insecure attributes are the fixture, not a bug.
+      - path: '_test\.go'
+        text: 'G124:'
+        linters:
+          - gosec
 
 settings:
   gosec:
