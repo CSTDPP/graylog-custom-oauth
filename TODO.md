@@ -6,37 +6,32 @@ behind most of these.
 
 ## Correctness
 
-- [ ] **Bootstrap Job: drop the dead `@type` field on UserConfiguration PUT.**
-      The current PUT to `org.graylog2.users.UserConfiguration` is rejected by
-      Graylog because `@type` is not an accepted property. The job continues
-      because the existing config already permits the Admin user to mint
-      tokens, but the WARNING is misleading. Either drop the call or send a
-      proper merged payload without `@type`.
-- [ ] **Bootstrap Job: stop attempting to enable `HTTPHeaderAuthConfig` via
-      cluster_config.** That class does not exist in Graylog 7. The Trusted
-      HTTP Header authenticator must be configured as an Authentication
-      Service backend (UI or `/api/system/authentication/services/backends`).
-      Either implement that or remove the placeholder and document the manual
-      step.
 - [ ] **Provisioner role sync correctness on first request.** The cache key
       uses `username + roles-hash`; on a brand-new login it correctly misses
       and provisions, but the role-set returned by `GetUser` immediately after
       `CreateUser` is sometimes the requested set, sometimes empty depending
       on Graylog's response timing. Add a small post-create assertion or rely
       solely on the membership endpoints (skip GetUser for the create path).
-- [ ] **`url`/`tenantID`/`redirectURL` fields on `oidc.Handler` are now
-      unused** after the logout simplification — remove them and shrink the
-      constructor.
+- [ ] **`tenantID`/`redirectURL` fields on `oidc.Handler` are now unused**
+      after the logout simplification — remove them and shrink the
+      constructor. Both are assigned in `NewHandler` and never read
+      (`internal/oidc/handler.go:44-45`). There is no `url` field; an earlier
+      revision of this list named one.
 
 ## Security
 
 - [ ] **Confirm the cookie session manager rotates HMAC keys cleanly.** Today
       a key change invalidates every session. Add a documented rotation
       procedure or support a list of accepted keys.
-- [ ] **Audit `Strip` headers default list.** It currently strips
-      `Remote-User`, `X-Remote-User`, `X-Remote-Email`, `X-Remote-Name`. Any
-      other headers Graylog might trust (`X-Forwarded-User`, etc.) should be
-      added to prevent client spoofing.
+- [ ] **Audit `Strip` headers default list.** (In flight: PR #27.) The
+      default was **not** what an earlier revision of this item claimed: it
+      stripped only `X-Remote-User`, `X-Remote-Email`, `X-Remote-Name` —
+      `Remote-User`, the conventional name for Graylog's Trusted HTTP Header
+      authenticator, was missing. Not exploitable under the configuration
+      `spec/ARCHITECTURE.md` documents (Graylog reads `X-Remote-User`, which
+      is stripped and then overwritten by `Header.Set`), but a Graylog
+      pointed at the unprefixed spelling would have accepted a client-supplied
+      identity.
 - [ ] **Rate-limit failed logins / OIDC callback errors** to make brute-force
       and replay-style attacks against the callback endpoint less attractive.
 - [ ] **CSRF on `/oauth/logout`.** It's a GET that mutates server state
@@ -57,10 +52,6 @@ behind most of these.
       the Graylog backend logs.
 - [ ] **Expose `/oauth/whoami`** returning the current session's username and
       mapped roles, for debugging and for a UI "logged in as" widget.
-- [ ] **Provide a Grafana dashboard JSON** that ships with the chart and
-      visualises the existing Prometheus metrics
-      (`auth_operations_total{operation,result}`, request latencies, SSE
-      connection counts).
 
 ## UX
 
@@ -85,6 +76,26 @@ behind most of these.
 - [ ] **CI smoke test for the chart** using `helm lint` + `helm template`
       against each TLS mode.
 
+## Build & CI
+
+- [ ] **Move the `settings:` block in `.golangci.yml` under `linters:`.** At
+      the top level it is invalid for schema `version: "2"`:
+      `golangci-lint config verify` rejects the file and `run` silently
+      ignores the block, so `gosec.severity`, `gosec.confidence`,
+      `errcheck.check-type-assertions`, `errcheck.check-blank` and the
+      `gocritic` tags have never actually been in effect. Relocating it is not
+      free — it surfaces 11 further findings (10 `errcheck` from
+      `check-blank`, 1 `gocritic` `importShadow` at
+      `internal/proxy/handler.go:208`). Decide: enable and fix, or drop the
+      block.
+- [ ] **Run CI on pushes to `main`.** `ci.yml` has `branches-ignore: [main]`,
+      so the default branch is never re-linted after a merge. This is why the
+      gosec G124 breakage (fixed in PR #26) stayed invisible for three months
+      and only ever surfaced as red Dependabot PRs.
+- [ ] **Raise the 30% coverage gate** (`ci.yml`). That is low for a component
+      sitting on the authentication path; the packages that matter most
+      (`oidc`, `graylog`, `jwt`) currently have no unit tests at all.
+
 ## Documentation
 
 - [ ] **Add a `docs/OPERATIONS.md`** describing: how to rotate the API token,
@@ -102,4 +113,31 @@ behind most of these.
       distinct users.
 - [ ] Helm chart `tests/` that exercise the readiness probe via the published
       ServiceMonitor target instead of busybox.
-- [ ] Multi-arch image build (currently amd64-only).
+
+## Tracked elsewhere (not actionable in this repository)
+
+The bootstrap Job lives in the consuming GitOps repo, not here — grepping this
+repository for `UserConfiguration` or `HTTPHeaderAuthConfig` finds only this
+file and `docs/REVIEW.md`. Both items are real; they just cannot be fixed by a
+commit to `graylog-auth-proxy`. Note that `docs/REVIEW.md` lists the first of
+them as recommended next step #1.
+
+- [ ] **Bootstrap Job: drop the dead `@type` field on the
+      `org.graylog2.users.UserConfiguration` PUT.** Graylog rejects `@type` as
+      a property. The job continues because the existing config already
+      permits the Admin user to mint tokens, but the WARNING is misleading.
+- [ ] **Bootstrap Job: stop attempting to enable `HTTPHeaderAuthConfig` via
+      cluster_config.** That class does not exist in Graylog 7. The Trusted
+      HTTP Header authenticator must be configured as an Authentication
+      Service backend (UI or `/api/system/authentication/services/backends`).
+
+## Done
+
+- [x] **Grafana dashboard ships with the chart** —
+      `chart/templates/grafana-dashboard.yaml`.
+- [x] **Multi-arch image build** — `cd.yml` builds
+      `linux/amd64,linux/arm64` via buildx.
+- [x] **Pin CI tool versions** — golangci-lint, gosec, govulncheck and
+      trivy-action no longer float on `@latest`/`@master` (PR #26).
+- [x] **Unblock the Lint job** — gosec G124 excluded for the session cookie
+      test fixtures (PR #26).

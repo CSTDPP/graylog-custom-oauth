@@ -8,6 +8,12 @@ existing design.
 Scope: `cmd/`, `internal/`, `chart/`, `spec/`. Integration tests glanced at,
 not exercised. No runtime profiling.
 
+> **Accuracy pass, 2026-09-30.** The findings below were re-checked against
+> the code. Three claims did not survive and are corrected inline, marked
+> **[corrected]**; items since addressed are marked **[fixed]**. The body is
+> otherwise left as originally written — this is a point-in-time review, not a
+> living document. `../TODO.md` is the authoritative list of open work.
+
 ## Summary
 
 The proxy does its job. The OIDC dance is conventional and uses PKCE+state.
@@ -55,7 +61,9 @@ user acceptance" stage and should not yet be considered hardened.
 ### Correctness
 
 1. **Bootstrap Job has two known dead branches** that emit warnings but
-   don't fail:
+   don't fail. **[corrected]** The Job is not part of this repository — it
+   lives in the consuming GitOps repo, so neither branch can be fixed here.
+   See "Tracked elsewhere" in `../TODO.md`:
    - The `org.graylog2.users.UserConfiguration` PUT includes an `@type`
      field Graylog rejects. The job continues because the existing config
      already permits Admin token creation.
@@ -70,7 +78,8 @@ user acceptance" stage and should not yet be considered hardened.
 
 3. **The provisioning cache key uses a custom insertion sort** for the role
    slice. It's correct for the small lists involved but the standard library
-   `slices.Sort` is shorter and stdlib-blessed.
+   `slices.Sort` is shorter and stdlib-blessed. **[fixed]** Replaced with
+   `slices.Sorted` in PR #27.
 
 ### Security
 
@@ -79,11 +88,17 @@ user acceptance" stage and should not yet be considered hardened.
    else), but the convention is POST + token. Worth a conscious decision
    either way.
 
-2. **Strip header list is only the four `*Remote*` headers.** If Graylog or
-   any future backend ever trusts additional headers (`X-Forwarded-User`,
-   `X-Auth-Request-User`, `X-Authenticated-User`), the proxy will happily
-   forward whatever the client sends. The strip list should be a documented
-   superset of "all headers any backend might trust".
+2. **Strip header list is only the three `X-Remote-*` headers.**
+   **[corrected]** This originally read "the four `*Remote*` headers"; the
+   default was `X-Remote-User`, `X-Remote-Email`, `X-Remote-Name` and did
+   **not** include `Remote-User` — the conventional name for Graylog's
+   Trusted HTTP Header authenticator. The understatement mattered: the one
+   header most likely to be trusted by the backend was the one missing. If
+   Graylog or any future backend ever trusts additional headers
+   (`X-Forwarded-User`, `X-Auth-Request-User`, `X-Authenticated-User`), the
+   proxy will happily forward whatever the client sends. The strip list should
+   be a documented superset of "all headers any backend might trust".
+   **[fixed]** Widened in PR #27.
 
 3. **No rate limiting on `/oauth/login` or `/oauth/callback`.** OIDC code
    replay is bounded by Entra anyway, but rate-limiting failed callbacks
@@ -146,7 +161,8 @@ user acceptance" stage and should not yet be considered hardened.
 Roughly the order I would tackle them:
 
 1. Clean up the bootstrap Job (the two dead branches) and document the
-   manual Trusted Header authentication-service setup.
+   manual Trusted Header authentication-service setup. **[corrected]** This
+   is work for the consuming GitOps repo, not this one.
 2. Add unit tests for `UpdateUserRoles` and the provisioning cache.
 3. Pin a real chart `appVersion` per release and remove the
    `imagePullPolicy: Always` workaround in the consuming GitOps repo.
