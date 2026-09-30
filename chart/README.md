@@ -176,6 +176,8 @@ The ConfigMap value must be a JSON object mapping Entra role names to Graylog ro
 
 The proxy injects the authenticated user's identity into upstream requests and strips potentially spoofed headers from incoming requests.
 
+`strip` must remain a superset of every header the backend might treat as an authenticated identity — a backend that trusts a header the proxy does not strip will accept whatever the client sends. Note that `Remote-User`, not just the `X-` prefixed spelling, is the conventional header name for Graylog's Trusted HTTP Header authenticator. Setting `strip` replaces the default list rather than extending it.
+
 ```yaml
 headers:
   # Header sent to Graylog with the authenticated username
@@ -183,9 +185,13 @@ headers:
 
   # Headers stripped from incoming client requests to prevent spoofing
   strip:
+    - "Remote-User"
     - "X-Remote-User"
     - "X-Remote-Email"
     - "X-Remote-Name"
+    - "X-Forwarded-User"
+    - "X-Auth-Request-User"
+    - "X-Authenticated-User"
 
   # Additional headers injected into every proxied request
   inject:
@@ -389,9 +395,13 @@ roleMap:
 headers:
   remoteUserHeader: "X-Remote-User"
   strip:
+    - "Remote-User"
     - "X-Remote-User"
     - "X-Remote-Email"
     - "X-Remote-Name"
+    - "X-Forwarded-User"
+    - "X-Auth-Request-User"
+    - "X-Authenticated-User"
 
 tls:
   mode: certManager
